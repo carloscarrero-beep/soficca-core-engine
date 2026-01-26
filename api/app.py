@@ -1,3 +1,5 @@
+from fastapi.responses import HTMLResponse
+from pathlib import Path
 from fastapi import FastAPI
 from pydantic import BaseModel, Field
 from typing import Any, Dict, List
@@ -27,4 +29,8 @@ def root():
         "endpoints": ["/docs", "/v1/report"],
     }
 
+@app.get("/demo", response_class=HTMLResponse)
+def demo():
+    html_path = Path(__file__).with_name("demo.html")
+    return html_path.read_text(encoding="utf-8")
 

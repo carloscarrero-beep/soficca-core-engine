@@ -1,0 +1,163 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width,initial-scale=1" />
+  <title>Pen Demo (Soficca Core)</title>
+  <style>
+    body { font-family: system-ui, -apple-system, Segoe UI, Roboto, Arial, sans-serif; margin: 0; background: #0b0f14; color: #e6edf3; }
+    .wrap { display: grid; grid-template-columns: 1.6fr 1fr; gap: 16px; padding: 16px; height: 100vh; box-sizing: border-box; }
+    .card { background: #111826; border: 1px solid #1f2a3a; border-radius: 12px; overflow: hidden; }
+    .header { padding: 12px 14px; border-bottom: 1px solid #1f2a3a; display:flex; align-items:center; justify-content:space-between; }
+    .title { font-weight: 700; }
+    .pill { font-size: 12px; padding: 4px 8px; border-radius: 999px; background: #182235; border: 1px solid #22314a; color:#c8d4e3; }
+    .chat { padding: 12px; height: calc(100vh - 150px); overflow: auto; }
+    .msg { margin: 10px 0; line-height: 1.35; white-space: pre-wrap; }
+    .me { color: #b6d6ff; }
+    .pen { color: #e6edf3; }
+    .meta { font-size: 12px; color: #96a7bd; margin-top: 6px; }
+    .inputbar { display:flex; gap: 8px; padding: 12px; border-top: 1px solid #1f2a3a; }
+    input[type="text"] { flex:1; padding: 10px 12px; border-radius: 10px; border: 1px solid #22314a; background:#0b1220; color:#e6edf3; }
+    button { padding: 10px 12px; border-radius: 10px; border: 1px solid #22314a; background:#182235; color:#e6edf3; cursor:pointer; }
+    button:hover { filter: brightness(1.1); }
+    .panel { padding: 12px; display:grid; gap: 10px; }
+    .row { display:flex; gap: 8px; align-items:center; flex-wrap: wrap; }
+    label { font-size: 13px; color:#c8d4e3; display:flex; gap:6px; align-items:center; }
+    pre { margin: 0; padding: 10px; border-radius: 10px; background:#0b1220; border:1px solid #22314a; overflow:auto; max-height: 55vh; }
+    .small { font-size: 12px; color:#96a7bd; }
+  </style>
+</head>
+<body>
+  <div class="wrap">
+    <div class="card">
+      <div class="header">
+        <div class="title">Pen Demo</div>
+        <div class="pill" id="statusPill">ready</div>
+      </div>
+      <div class="chat" id="chat"></div>
+      <div class="inputbar">
+        <input id="text" type="text" placeholder="Type your message…" autocomplete="off" />
+        <button id="send">Send</button>
+        <button id="reset">Reset</button>
+      </div>
+    </div>
+
+    <div class="card">
+      <div class="header">
+        <div class="title">Audit Panel</div>
+        <div class="pill" id="pathPill">path</div>
+      </div>
+      <div class="panel">
+        <div class="row">
+          <label><input type="checkbox" id="debug" /> debug</label>
+          <span class="small">debug=true returns full state</span>
+        </div>
+        <pre id="audit">{}</pre>
+        <div class="small">
+          Shows: engine_version, ruleset_version, path, flags, reasons, recommendations, trace.
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <script>
+    let chatState = null;  // server-managed conversation state
+    const userProfile = { name: "Carlos", dob: "1993-01-01" }; // change as you like
+
+    const chatEl = document.getElementById("chat");
+    const auditEl = document.getElementById("audit");
+    const statusPill = document.getElementById("statusPill");
+    const pathPill = document.getElementById("pathPill");
+
+    function addMsg(who, text, meta="") {
+      const div = document.createElement("div");
+      div.className = "msg " + (who === "me" ? "me" : "pen");
+      div.textContent = (who === "me" ? "YOU: " : "PEN: ") + (text || "");
+      if (meta) {
+        const m = document.createElement("div");
+        m.className = "meta";
+        m.textContent = meta;
+        div.appendChild(m);
+      }
+      chatEl.appendChild(div);
+      chatEl.scrollTop = chatEl.scrollHeight;
+    }
+
+    function setAudit(report) {
+      const payload = {
+        engine_version: report.engine_version,
+        ruleset_version: report.ruleset_version,
+        path: report.path,
+        flags: report.flags,
+        reasons: report.reasons,
+        recommendations: report.recommendations,
+        trace: report.trace,
+      };
+      auditEl.textContent = JSON.stringify(payload, null, 2);
+      pathPill.textContent = report.path || "path";
+    }
+
+    async function send(text) {
+      statusPill.textContent = "thinking…";
+
+      const debug = document.getElementById("debug").checked;
+
+      const payload = {
+        user: userProfile,
+        measurements: [],
+        context: {
+          chat_text: text,
+          chat_state: chatState,
+          debug: debug
+        }
+      };
+
+      const res = await fetch("/v1/report", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify(payload)
+      });
+
+      const data = await res.json();
+      const report = data.report || {};
+      const chat = report.chat || {};
+
+      // update local state
+      chatState = chat.state || chatState;
+
+      setAudit(report);
+      addMsg("pen", chat.assistant_message || "(no message)", `phase=${chat.phase} done=${chat.done}`);
+
+      statusPill.textContent = "ready";
+    }
+
+    document.getElementById("send").addEventListener("click", async () => {
+      const input = document.getElementById("text");
+      const text = input.value.trim();
+      if (!text) return;
+      addMsg("me", text);
+      input.value = "";
+      await send(text);
+    });
+
+    document.getElementById("text").addEventListener("keydown", async (e) => {
+      if (e.key === "Enter") document.getElementById("send").click();
+    });
+
+    document.getElementById("reset").addEventListener("click", () => {
+      chatState = null;
+      chatEl.innerHTML = "";
+      auditEl.textContent = "{}";
+      pathPill.textContent = "path";
+      statusPill.textContent = "ready";
+      addMsg("pen", "Hi. I’m Pen. (reset done)");
+    });
+
+    // start: get first assistant message (empty user text)
+    (async function boot() {
+      addMsg("pen", "Loading demo…");
+      await send("");
+    })();
+  </script>
+</body>
+</html>
