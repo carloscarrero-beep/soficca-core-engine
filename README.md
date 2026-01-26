@@ -121,7 +121,7 @@ Each path is backed by explicit **flags**, **reasons**, and **recommendations**.
 - **May be invalid:** yes  
 - **Guarantee:** the engine always returns a response with a stable output shape  
 
-### Required top-level fields (v0.1)
+### Expected top-level fields (v0.1)
 
 - `user`: object  
 - `measurements`: list (may be empty)  
