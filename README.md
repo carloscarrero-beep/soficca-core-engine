@@ -80,7 +80,7 @@ In v0.1, the Core Engine supports a **guided conversational flow**.
 The conversational layer:
 
 - Tracks conversation **phases**  
-  (`reason → symptoms → context → action → end`)
+  (`intro → reason → symptoms → context → interpretation → action → end`)
 - Maintains structured **slots** (e.g. frequency, desire, stress)
 - Accepts open-ended user input (not rigid forms)
 - Interprets responses deterministically
