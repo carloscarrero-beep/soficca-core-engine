@@ -17,7 +17,7 @@ def normalize(slots):
         desire_preserved = None
     elif desire == "present":
         desire_preserved = True
-    elif desire == "low":
+    elif desire in ("low", "reduced"):
         desire_preserved = False
     else:
         desire_preserved = None
@@ -29,6 +29,8 @@ def normalize(slots):
         stress_high = True
     elif stress == "low":
         stress_high = False
+    elif stress == "moderate":
+        stress_high = None
     else:
         stress_high = None
 

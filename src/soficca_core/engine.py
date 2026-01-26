@@ -18,6 +18,7 @@ from soficca_core import messages_en as messages
 
 def _empty_report():
     return {
+        "path": None,
         "scores": {},
         "flags": [],
         "recommendations": [],
@@ -42,8 +43,14 @@ def generate_report(input_data):
                 "report": report,
             }
 
-        user = cleaned.get("user") or {}
-        context = cleaned.get("context") or {}
+        normalized_input = {
+            "user": cleaned.get("user") or {},
+            "measurements": cleaned.get("measurements") or [],
+            "context": cleaned.get("context") or {},
+        }
+
+        user = normalized_input["user"]
+        context = normalized_input["context"]
         chat_text = context.get("chat_text", "")
         state = context.get("chat_state") or new_state(user_profile=user)
 
@@ -104,7 +111,7 @@ def generate_report(input_data):
         report["flags"] = decision.get("flags", [])
         report["recommendations"] = decision.get("recommendations", [])
         report["reasons"] = decision.get("reasons", [])
-        report["scores"]["path"] = decision.get("path", "PATH_MORE_QUESTIONS")
+        report["path"] = decision.get("path", "PATH_MORE_QUESTIONS")
 
         report["chat"] = {
             "phase": state.get("phase"),
@@ -117,7 +124,7 @@ def generate_report(input_data):
         return {
             "ok": True,
             "errors": [],
-            "normalized_input": normalized_input,
+            "normalized_input": normalized_input,  # ✅ now populated
             "report": report,
         }
 
@@ -134,3 +141,4 @@ def generate_report(input_data):
             "normalized_input": {},
             "report": _empty_report(),
         }
+

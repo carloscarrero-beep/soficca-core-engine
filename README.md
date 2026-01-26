@@ -153,6 +153,7 @@ Each path is backed by explicit **flags**, **reasons**, and **recommendations**.
 
 ### Report fields
 
+- `path`
 - `scores`
 - `flags`
 - `recommendations`
