@@ -18,6 +18,7 @@ def run_demo():
         "Stress is pretty high lately.",
         "Morning erections are reduced compared to before.",
         "I'd like medication support.",
+        "I want to kill myself."
     ]
 
     for i, text in enumerate(user_messages):
@@ -27,6 +28,7 @@ def run_demo():
             "context": {
                 "chat_text": text,
                 "chat_state": chat_state,
+                "debug": True,
             },
         }
 
@@ -38,24 +40,30 @@ def run_demo():
         phase = chat.get("phase")
         done = chat.get("done")
 
-        path = report.get("scores", {}).get("path", "PATH_MORE_QUESTIONS")
+        path = report.get("path") or report.get("scores", {}).get("path") or "PATH_MORE_QUESTIONS"
         reasons = report.get("reasons", [])
         recs = report.get("recommendations", [])
         flags = report.get("flags", [])
 
         print("\n" + "=" * 70)
         print(f"TURN {i}")
-        print(f"USER: {text!r}")
+        print(f"USER: {text!r}" if text else "USER: (start)")
         print(f"PHASE: {phase} | DONE: {done}")
         print("-" * 70)
         print("PEN:")
         print(assistant)
         print("-" * 70)
         print("DECISION:")
+        print("engine_version:", report.get("engine_version"))
+        print("ruleset_version:", report.get("ruleset_version"))
         print("path:", path)
         print("flags:", flags)
         print("reasons:", reasons)
         print("recommendations:", recs)
+
+        trace = report.get("trace", {})
+        if trace:
+            print("trace:", trace)
 
         # update state for next turn
         chat_state = chat.get("state", chat_state)

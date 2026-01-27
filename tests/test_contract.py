@@ -1,5 +1,38 @@
-
 from soficca_core.engine import generate_report
+
+def test_safety_lock_asks_country_then_escalates():
+    # Turn 1: red flag triggers safety lock and asks for country
+    payload1 = {
+        "user": {},
+        "measurements": [],
+        "context": {
+            "chat_text": "I want to kill myself",
+            "chat_state": None,
+            "debug": False,
+        },
+    }
+    res1 = generate_report(payload1)
+    assert res1["ok"] is True
+    assert res1["report"]["path"] == "PATH_ESCALATE_HUMAN"
+    assert "RED_FLAG_SELF_HARM" in res1["report"]["flags"]
+    assert "country" in (res1["report"]["chat"].get("assistant_message") or "").lower()
+
+    # Turn 2: provide country; should give escalation guidance and end
+    st = res1["report"]["chat"]["state"]
+    payload2 = {
+        "user": {},
+        "measurements": [],
+        "context": {
+            "chat_text": "Colombia",
+            "chat_state": st,
+            "debug": False,
+        },
+    }
+    res2 = generate_report(payload2)
+    assert res2["ok"] is True
+    assert res2["report"]["path"] == "PATH_ESCALATE_HUMAN"
+    assert res2["report"]["chat"]["done"] is True
+
 
 def test_generate_report_contract_shape_future_proof():
     result = generate_report({"any": "thing"})

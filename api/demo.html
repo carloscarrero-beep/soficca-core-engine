@@ -3,87 +3,738 @@
 <head>
   <meta charset="utf-8" />
   <meta name="viewport" content="width=device-width,initial-scale=1" />
-  <title>Pen Demo (Soficca Core)</title>
+  <title>Pen² Demo</title>
+
   <style>
-    body { font-family: system-ui, -apple-system, Segoe UI, Roboto, Arial, sans-serif; margin: 0; background: #0b0f14; color: #e6edf3; }
-    .wrap { display: grid; grid-template-columns: 1.6fr 1fr; gap: 16px; padding: 16px; height: 100vh; box-sizing: border-box; }
-    .card { background: #111826; border: 1px solid #1f2a3a; border-radius: 12px; overflow: hidden; }
-    .header { padding: 12px 14px; border-bottom: 1px solid #1f2a3a; display:flex; align-items:center; justify-content:space-between; }
-    .title { font-weight: 700; }
-    .pill { font-size: 12px; padding: 4px 8px; border-radius: 999px; background: #182235; border: 1px solid #22314a; color:#c8d4e3; }
-    .chat { padding: 12px; height: calc(100vh - 150px); overflow: auto; }
-    .msg { margin: 10px 0; line-height: 1.35; white-space: pre-wrap; }
-    .me { color: #b6d6ff; }
-    .pen { color: #e6edf3; }
-    .meta { font-size: 12px; color: #96a7bd; margin-top: 6px; }
-    .inputbar { display:flex; gap: 8px; padding: 12px; border-top: 1px solid #1f2a3a; }
-    input[type="text"] { flex:1; padding: 10px 12px; border-radius: 10px; border: 1px solid #22314a; background:#0b1220; color:#e6edf3; }
-    button { padding: 10px 12px; border-radius: 10px; border: 1px solid #22314a; background:#182235; color:#e6edf3; cursor:pointer; }
-    button:hover { filter: brightness(1.1); }
-    .panel { padding: 12px; display:grid; gap: 10px; }
-    .row { display:flex; gap: 8px; align-items:center; flex-wrap: wrap; }
-    label { font-size: 13px; color:#c8d4e3; display:flex; gap:6px; align-items:center; }
-    pre { margin: 0; padding: 10px; border-radius: 10px; background:#0b1220; border:1px solid #22314a; overflow:auto; max-height: 55vh; }
-    .small { font-size: 12px; color:#96a7bd; }
+    :root{
+      /* Apple-ish neutrals */
+      --bg: #f5f5f7;
+      --card: rgba(255,255,255,.92);
+      --cardSolid: #ffffff;
+      --border: rgba(0,0,0,.08);
+      --border2: rgba(0,0,0,.12);
+      --text: #111111;
+      --muted: rgba(17,17,17,.60);
+      --muted2: rgba(17,17,17,.40);
+
+      /* Accent (iOS blue) */
+      --accent: #0A84FF;
+      --accent2: #0077ED;
+      --accentSoft: rgba(10,132,255,.10);
+
+      /* Shadows + radii */
+      --shadow: 0 18px 60px rgba(0,0,0,.10);
+      --shadow2: 0 10px 30px rgba(0,0,0,.08);
+      --shadow3: 0 6px 16px rgba(0,0,0,.06);
+
+      --r-xl: 24px;
+      --r-lg: 20px;
+      --r-md: 16px;
+      --r-sm: 12px;
+
+      --maxW: 980px;
+      --pad: 18px;
+    }
+
+    *{ box-sizing:border-box; }
+    html, body { height:100%; }
+    body{
+      margin:0;
+      color: var(--text);
+      font-family: ui-sans-serif, system-ui, -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, Helvetica, Arial;
+      background:
+        radial-gradient(900px 520px at 18% 8%, rgba(10,132,255,.10), transparent 60%),
+        radial-gradient(900px 520px at 82% 10%, rgba(10,132,255,.06), transparent 60%),
+        var(--bg);
+      overflow:hidden;
+    }
+
+    /* Top Bar */
+    .topbar{
+      max-width: var(--maxW);
+      margin: 14px auto 12px;
+      padding: 0 var(--pad);
+      display:flex;
+      align-items:center;
+      justify-content:space-between;
+      gap: 12px;
+    }
+
+    .titleBlock{
+      display:flex;
+      flex-direction:column;
+      gap: 2px;
+      user-select:none;
+    }
+    .titleBlock .title{
+      font-size: 14px;
+      font-weight: 800;
+      letter-spacing: .2px;
+      margin:0;
+      line-height: 1.1;
+    }
+    .titleBlock .sub{
+      font-size: 12px;
+      color: var(--muted);
+      line-height: 1.1;
+    }
+
+    .topActions{
+      display:flex;
+      gap: 10px;
+      align-items:center;
+      justify-content:flex-end;
+      flex-wrap: wrap;
+    }
+
+    /* Status chip */
+    .status{
+      display:flex;
+      align-items:center;
+      gap: 8px;
+      padding: 8px 12px;
+      border-radius: 999px;
+      background: rgba(255,255,255,.75);
+      border: 1px solid var(--border);
+      backdrop-filter: blur(12px);
+      box-shadow: var(--shadow3);
+      font-size: 12px;
+      color: var(--muted);
+    }
+    .dot{
+      width: 8px; height: 8px;
+      border-radius: 999px;
+      background: #34C759;
+      box-shadow: 0 0 0 4px rgba(52,199,89,.12);
+    }
+    .dot.thinking{
+      background:#FF9F0A;
+      box-shadow: 0 0 0 4px rgba(255,159,10,.14);
+    }
+    .dot.error{
+      background:#FF3B30;
+      box-shadow: 0 0 0 4px rgba(255,59,48,.14);
+    }
+
+    /* Buttons (premium pills) */
+    .btn{
+      appearance:none;
+      border: 1px solid var(--border2);
+      background: rgba(255,255,255,.82);
+      color: rgba(17,17,17,.92);
+      padding: 10px 14px;
+      border-radius: 999px;
+      font-size: 13px;
+      font-weight: 800;
+      letter-spacing: .1px;
+      cursor:pointer;
+      box-shadow: var(--shadow3);
+      transition: transform .08s ease, filter .15s ease, background .15s ease, box-shadow .15s ease;
+      user-select:none;
+    }
+    .btn:hover{
+      filter: brightness(1.02);
+      box-shadow: 0 10px 24px rgba(0,0,0,.10);
+    }
+    .btn:active{ transform: translateY(1px); }
+
+    .btnPrimary{
+      background: linear-gradient(180deg, rgba(10,132,255,.96), rgba(0,119,237,.96));
+      border-color: rgba(0,119,237,.45);
+      color: white;
+      box-shadow: 0 14px 34px rgba(10,132,255,.22);
+    }
+    .btnPrimary:hover{
+      box-shadow: 0 16px 42px rgba(10,132,255,.26);
+    }
+
+    .btnGhost{
+      background: rgba(255,255,255,.65);
+    }
+
+    /* Main Card */
+    .shell{
+      max-width: var(--maxW);
+      margin: 0 auto;
+      padding: 0 var(--pad) 18px;
+      height: calc(100vh - 72px);
+      display:flex;
+      flex-direction:column;
+      min-height: 0;
+    }
+
+    .card{
+      background: var(--card);
+      border: 1px solid var(--border);
+      border-radius: var(--r-xl);
+      box-shadow: var(--shadow);
+      backdrop-filter: blur(14px);
+      overflow:hidden;
+      display:flex;
+      flex-direction:column;
+      min-height: 0;
+    }
+
+    .cardHeader{
+      padding: 14px 16px;
+      display:flex;
+      align-items:center;
+      justify-content:space-between;
+      border-bottom: 1px solid var(--border);
+      background: rgba(255,255,255,.74);
+    }
+    .cardHeader .left{
+      display:flex;
+      align-items:center;
+      gap: 10px;
+      min-width: 0;
+    }
+    .cardHeader .hTitle{
+      font-weight: 900;
+      font-size: 13px;
+      letter-spacing: .2px;
+      margin:0;
+      color: rgba(17,17,17,.92);
+      white-space: nowrap;
+    }
+    .pathPill{
+      font-size: 12px;
+      padding: 7px 10px;
+      border-radius: 999px;
+      background: var(--accentSoft);
+      border: 1px solid rgba(10,132,255,.18);
+      color: rgba(10,132,255,.92);
+      font-weight: 900;
+      max-width: 260px;
+      overflow:hidden;
+      text-overflow: ellipsis;
+      white-space: nowrap;
+    }
+
+    /* Chat area */
+    .chat{
+      padding: 16px;
+      overflow:auto;
+      flex: 1 1 auto;
+      min-height: 0;
+      scroll-behavior: smooth;
+    }
+
+    .row{
+      display:flex;
+      margin: 12px 0;
+      gap: 10px;
+    }
+    .row.me{ justify-content:flex-end; }
+    .row.pen{ justify-content:flex-start; }
+
+    .bubble{
+      max-width: 78%;
+      border-radius: 20px;
+      padding: 12px 12px;
+      border: 1px solid var(--border);
+      background: rgba(255,255,255,.94);
+      box-shadow: var(--shadow3);
+      position: relative;
+      animation: pop .20s ease-out both;
+    }
+    @keyframes pop{
+      from { transform: translateY(4px); opacity: .0; }
+      to   { transform: translateY(0); opacity: 1; }
+    }
+
+    .bubble.me{
+      background: rgba(10,132,255,.10);
+      border-color: rgba(10,132,255,.18);
+      box-shadow: 0 12px 28px rgba(10,132,255,.12);
+    }
+
+    .bubbleText{
+      white-space: pre-wrap;
+      color: rgba(17,17,17,.94);
+      line-height: 1.45;
+      font-size: 14px;
+      letter-spacing: .05px;
+    }
+
+    .meta{
+      margin-top: 8px;
+      font-size: 11px;
+      color: var(--muted2);
+      letter-spacing: .1px;
+    }
+
+    /* Thinking row (ultra clean) */
+    .thinking{
+      display:flex;
+      align-items:center;
+      gap: 10px;
+      padding: 10px 12px;
+      border-radius: 999px;
+      border: 1px solid rgba(0,0,0,.08);
+      background: rgba(255,255,255,.78);
+      box-shadow: var(--shadow3);
+      color: var(--muted);
+      font-size: 12px;
+      width: fit-content;
+      max-width: 78%;
+    }
+    .pulse{
+      width: 10px; height: 10px;
+      border-radius: 999px;
+      background: rgba(10,132,255,.75);
+      box-shadow: 0 0 0 6px rgba(10,132,255,.14);
+      animation: pulse 1.2s ease-in-out infinite;
+    }
+    @keyframes pulse{
+      0%{ transform: scale(.95); opacity: .75; }
+      50%{ transform: scale(1.05); opacity: 1; }
+      100%{ transform: scale(.95); opacity: .75; }
+    }
+    .dots::after{
+      content:"";
+      display:inline-block;
+      width: 18px;
+      text-align:left;
+      animation: dots 1.2s steps(4,end) infinite;
+    }
+    @keyframes dots{
+      0%{ content:""; }
+      25%{ content:"."; }
+      50%{ content:".."; }
+      75%{ content:"..."; }
+      100%{ content:""; }
+    }
+
+    /* Composer (very iOS) */
+    .composer{
+      padding: 12px 12px 14px;
+      border-top: 1px solid var(--border);
+      background: rgba(255,255,255,.74);
+    }
+    .composerRow{
+      display:flex;
+      gap: 10px;
+      align-items:center;
+    }
+    .input{
+      flex:1;
+      border-radius: 999px;
+      padding: 12px 14px;
+      border: 1px solid rgba(0,0,0,.10);
+      background: rgba(255,255,255,.96);
+      color: var(--text);
+      outline:none;
+      font-size: 14px;
+      letter-spacing: .05px;
+      box-shadow: inset 0 1px 0 rgba(255,255,255,.9), 0 10px 24px rgba(0,0,0,.06);
+      transition: box-shadow .15s ease, border-color .15s ease;
+    }
+    .input:focus{
+      border-color: rgba(10,132,255,.32);
+      box-shadow:
+        0 0 0 6px rgba(10,132,255,.10),
+        inset 0 1px 0 rgba(255,255,255,.9),
+        0 12px 30px rgba(0,0,0,.08);
+    }
+
+    .hint{
+      margin-top: 10px;
+      display:flex;
+      justify-content:space-between;
+      align-items:center;
+      gap: 12px;
+      font-size: 12px;
+      color: var(--muted);
+      padding: 0 4px;
+    }
+    .kbd{
+      border: 1px solid rgba(0,0,0,.10);
+      border-bottom-width: 2px;
+      padding: 2px 8px;
+      border-radius: 10px;
+      background: rgba(255,255,255,.92);
+      font-weight: 900;
+      color: rgba(17,17,17,.70);
+      letter-spacing: .1px;
+    }
+
+    .footer{
+      padding: 10px 12px;
+      text-align:center;
+      font-size: 12px;
+      color: var(--muted);
+      border-top: 1px solid var(--border);
+      background: rgba(255,255,255,.74);
+    }
+    .footer strong{ color: var(--text); }
+
+    /* Drawer (Audit + Settings) */
+    .drawerOverlay{
+      position: fixed;
+      inset: 0;
+      background: rgba(0,0,0,.20);
+      backdrop-filter: blur(6px);
+      opacity: 0;
+      pointer-events: none;
+      transition: opacity .18s ease;
+    }
+    .drawerOverlay.open{
+      opacity: 1;
+      pointer-events: auto;
+    }
+
+    .drawer{
+      position: fixed;
+      top: 0;
+      right: 0;
+      height: 100%;
+      width: min(460px, 92vw);
+      background: rgba(255,255,255,.92);
+      border-left: 1px solid rgba(0,0,0,.10);
+      box-shadow: -20px 0 60px rgba(0,0,0,.18);
+      backdrop-filter: blur(14px);
+      transform: translateX(100%);
+      transition: transform .22s ease;
+      display:flex;
+      flex-direction:column;
+      overflow:hidden;
+    }
+    .drawer.open{ transform: translateX(0); }
+
+    .drawerHeader{
+      padding: 14px 16px;
+      display:flex;
+      align-items:center;
+      justify-content:space-between;
+      border-bottom: 1px solid rgba(0,0,0,.08);
+      background: rgba(255,255,255,.82);
+    }
+    .drawerHeader .dTitle{
+      font-weight: 900;
+      font-size: 13px;
+      letter-spacing: .2px;
+      margin:0;
+    }
+
+    .drawerBody{
+      padding: 14px;
+      display:grid;
+      gap: 14px;
+      min-height: 0;
+      overflow:auto;
+    }
+
+    .section{
+      background: rgba(255,255,255,.78);
+      border: 1px solid rgba(0,0,0,.08);
+      border-radius: 18px;
+      box-shadow: 0 10px 26px rgba(0,0,0,.06);
+      padding: 12px;
+    }
+    .sectionTitle{
+      font-size: 12px;
+      font-weight: 900;
+      color: rgba(17,17,17,.80);
+      letter-spacing: .2px;
+      margin: 2px 0 10px;
+    }
+    .sectionNote{
+      font-size: 12px;
+      color: var(--muted);
+      margin: 8px 0 0;
+      line-height: 1.35;
+    }
+
+    pre{
+      margin:0;
+      padding: 12px;
+      border-radius: 16px;
+      background: rgba(245,245,247,.85);
+      border: 1px solid rgba(0,0,0,.08);
+      overflow:auto;
+      max-height: 45vh;
+      color: rgba(17,17,17,.86);
+      font-size: 12px;
+      line-height: 1.35;
+    }
+
+    /* iOS-like switches */
+    .switchRow{
+      display:flex;
+      align-items:center;
+      justify-content:space-between;
+      gap: 10px;
+      padding: 10px 2px;
+    }
+    .switchLabel{
+      font-size: 13px;
+      font-weight: 800;
+      color: rgba(17,17,17,.86);
+      letter-spacing: .1px;
+    }
+    .switchSub{
+      font-size: 12px;
+      color: var(--muted);
+      margin-top: 2px;
+    }
+    .switchText{
+      display:flex;
+      flex-direction:column;
+      min-width: 0;
+    }
+
+    .switch{
+      position: relative;
+      width: 46px;
+      height: 28px;
+      flex: 0 0 auto;
+    }
+    .switch input{
+      opacity: 0;
+      width: 0;
+      height: 0;
+    }
+    .slider{
+      position:absolute;
+      inset: 0;
+      border-radius: 999px;
+      background: rgba(0,0,0,.16);
+      border: 1px solid rgba(0,0,0,.10);
+      transition: background .15s ease;
+    }
+    .slider:before{
+      content:"";
+      position:absolute;
+      height: 24px;
+      width: 24px;
+      left: 2px;
+      top: 1.5px;
+      background: white;
+      border-radius: 999px;
+      box-shadow: 0 6px 14px rgba(0,0,0,.18);
+      transition: transform .15s ease;
+    }
+    .switch input:checked + .slider{
+      background: rgba(10,132,255,.85);
+      border-color: rgba(10,132,255,.30);
+    }
+    .switch input:checked + .slider:before{
+      transform: translateX(18px);
+    }
+
+    @media (max-width: 720px){
+      body{ overflow:auto; }
+      .shell{ height:auto; }
+      .card{ min-height: 78vh; }
+    }
   </style>
 </head>
+
 <body>
-  <div class="wrap">
-    <div class="card">
-      <div class="header">
-        <div class="title">Pen Demo</div>
-        <div class="pill" id="statusPill">ready</div>
-      </div>
-      <div class="chat" id="chat"></div>
-      <div class="inputbar">
-        <input id="text" type="text" placeholder="Type your message…" autocomplete="off" />
-        <button id="send">Send</button>
-        <button id="reset">Reset</button>
-      </div>
+  <!-- Top Bar -->
+  <div class="topbar">
+    <div class="titleBlock">
+      <p class="title">Pen²</p>
+      <div class="sub">Premium minimal demo UI • Soficca Core</div>
     </div>
 
-    <div class="card">
-      <div class="header">
-        <div class="title">Audit Panel</div>
-        <div class="pill" id="pathPill">path</div>
+    <div class="topActions">
+      <div class="status" title="Client status">
+        <span class="dot" id="statusDot"></span>
+        <span id="statusText">ready</span>
       </div>
-      <div class="panel">
-        <div class="row">
-          <label><input type="checkbox" id="debug" /> debug</label>
-          <span class="small">debug=true returns full state</span>
-        </div>
-        <pre id="audit">{}</pre>
-        <div class="small">
-          Shows: engine_version, ruleset_version, path, flags, reasons, recommendations, trace.
-        </div>
-      </div>
+
+      <button class="btn btnGhost" id="openDrawer" title="Audit & Settings">Details</button>
+      <button class="btn btnGhost" id="resetTop" title="Reset session">Reset</button>
     </div>
   </div>
 
+  <!-- Main -->
+  <div class="shell">
+    <div class="card">
+      <div class="cardHeader">
+        <div class="left">
+          <p class="hTitle">Conversation</p>
+          <div class="pathPill" id="pathPill">path</div>
+        </div>
+        <button class="btn btnPrimary" id="sendTop" title="Send message">Send</button>
+      </div>
+
+      <div class="chat" id="chat"></div>
+
+      <div class="composer">
+        <div class="composerRow">
+          <input id="text" class="input" type="text" placeholder="Type a message…" autocomplete="off" />
+        </div>
+        <div class="hint">
+          <div>Short inputs work best. The engine will guide the next step.</div>
+          <div><span class="kbd">Enter</span> to send</div>
+        </div>
+      </div>
+
+      <div class="footer">Powered by <strong>Soficca</strong></div>
+    </div>
+  </div>
+
+  <!-- Drawer -->
+  <div class="drawerOverlay" id="drawerOverlay"></div>
+  <aside class="drawer" id="drawer">
+    <div class="drawerHeader">
+      <p class="dTitle">Details</p>
+      <button class="btn btnGhost" id="closeDrawer">Close</button>
+    </div>
+
+    <div class="drawerBody">
+      <div class="section">
+        <div class="sectionTitle">Settings</div>
+
+        <div class="switchRow">
+          <div class="switchText">
+            <div class="switchLabel">Debug</div>
+            <div class="switchSub">Include debug=true (may return extra state)</div>
+          </div>
+          <label class="switch">
+            <input type="checkbox" id="debug" />
+            <span class="slider"></span>
+          </label>
+        </div>
+
+        <div class="switchRow">
+          <div class="switchText">
+            <div class="switchLabel">Slow mode</div>
+            <div class="switchSub">Adds a deliberate pause before responses</div>
+          </div>
+          <label class="switch">
+            <input type="checkbox" id="slowMode" checked />
+            <span class="slider"></span>
+          </label>
+        </div>
+
+        <div class="switchRow">
+          <div class="switchText">
+            <div class="switchLabel">Typing effect</div>
+            <div class="switchSub">Assistant messages appear as if typed</div>
+          </div>
+          <label class="switch">
+            <input type="checkbox" id="typing" checked />
+            <span class="slider"></span>
+          </label>
+        </div>
+
+        <div class="switchRow">
+          <div class="switchText">
+            <div class="switchLabel">Sound</div>
+            <div class="switchSub">Subtle send/receive chimes</div>
+          </div>
+          <label class="switch">
+            <input type="checkbox" id="sound" />
+            <span class="slider"></span>
+          </label>
+        </div>
+      </div>
+
+      <div class="section">
+        <div class="sectionTitle">Audit</div>
+        <pre id="audit">{}</pre>
+        <p class="sectionNote">
+          Shows: engine_version, ruleset_version, path, flags, reasons, recommendations, trace.
+        </p>
+      </div>
+    </div>
+  </aside>
+
   <script>
-    let chatState = null;  // server-managed conversation state
-    const userProfile = { name: "Carlos", dob: "1993-01-01" }; // change as you like
+    // --- State ---
+    let chatState = null;
+    let sessionId = null;
 
-    const chatEl = document.getElementById("chat");
-    const auditEl = document.getElementById("audit");
-    const statusPill = document.getElementById("statusPill");
-    const pathPill = document.getElementById("pathPill");
+    // Demo profile
+    const userProfile = { name: "Carlos", dob: "1993-01-01" };
 
-    function addMsg(who, text, meta="") {
-      const div = document.createElement("div");
-      div.className = "msg " + (who === "me" ? "me" : "pen");
-      div.textContent = (who === "me" ? "YOU: " : "PEN: ") + (text || "");
-      if (meta) {
-        const m = document.createElement("div");
-        m.className = "meta";
-        m.textContent = meta;
-        div.appendChild(m);
-      }
-      chatEl.appendChild(div);
+    // DOM
+    let chatEl, auditEl, statusTextEl, statusDotEl, pathPill;
+    let textInput, sendTopBtn, resetTopBtn, openDrawerBtn, closeDrawerBtn, drawer, overlay;
+
+    // --- Helpers ---
+    function sleep(ms){ return new Promise(r => setTimeout(r, ms)); }
+
+    function setStatus(mode, text){
+      statusTextEl.textContent = text || mode;
+      statusDotEl.classList.remove("thinking","error");
+      if (mode === "thinking") statusDotEl.classList.add("thinking");
+      if (mode === "error") statusDotEl.classList.add("error");
+    }
+
+    function playBeep(type){
+      const enabled = !!document.getElementById("sound")?.checked;
+      if (!enabled) return;
+
+      try{
+        const ctx = new (window.AudioContext || window.webkitAudioContext)();
+        const o = ctx.createOscillator();
+        const g = ctx.createGain();
+        o.connect(g); g.connect(ctx.destination);
+
+        o.type = "sine";
+        const now = ctx.currentTime;
+
+        const freq = type === "send" ? 520 : 690;
+        o.frequency.setValueAtTime(freq, now);
+        g.gain.setValueAtTime(0.018, now); // subtle
+        g.gain.exponentialRampToValueAtTime(0.0001, now + 0.12);
+
+        o.start(now);
+        o.stop(now + 0.13);
+      } catch(e){}
+    }
+
+    function scrollToBottom(){
+      if (!chatEl) return;
       chatEl.scrollTop = chatEl.scrollHeight;
     }
 
-    function setAudit(report) {
+    function addRow(who){
+      const row = document.createElement("div");
+      row.className = "row " + (who === "me" ? "me" : "pen");
+      chatEl.appendChild(row);
+      return row;
+    }
+
+    function addBubble(who, text, meta = ""){
+      const row = addRow(who);
+
+      const bubble = document.createElement("div");
+      bubble.className = "bubble " + (who === "me" ? "me" : "pen");
+
+      const bubbleText = document.createElement("div");
+      bubbleText.className = "bubbleText";
+      bubbleText.textContent = text || "";
+
+      bubble.appendChild(bubbleText);
+
+      const metaEl = document.createElement("div");
+      metaEl.className = "meta";
+      metaEl.textContent = meta || "";
+      if (meta) bubble.appendChild(metaEl);
+
+      row.appendChild(bubble);
+      scrollToBottom();
+
+      return { row, bubble, bubbleText, metaEl };
+    }
+
+    function addThinking(){
+      const row = addRow("pen");
+      const box = document.createElement("div");
+      box.className = "thinking";
+      box.innerHTML = '<span class="pulse"></span><span>Thinking<span class="dots"></span></span>';
+      row.appendChild(box);
+      scrollToBottom();
+      return row;
+    }
+
+    function setAudit(report){
       const payload = {
         engine_version: report.engine_version,
         ruleset_version: report.ruleset_version,
@@ -97,67 +748,200 @@
       pathPill.textContent = report.path || "path";
     }
 
-    async function send(text) {
-      statusPill.textContent = "thinking…";
+    async function ensureSession(){
+      const existing = localStorage.getItem("pen2_session_id");
+      if (existing){
+        sessionId = existing;
+        return sessionId;
+      }
 
-      const debug = document.getElementById("debug").checked;
+      const res = await fetch("/v1/session", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ user: userProfile, measurements: [], context: {} }),
+      });
+
+      const raw = await res.text();
+      if (!res.ok) throw new Error(`session create failed (${res.status}): ${raw}`);
+
+      const data = JSON.parse(raw);
+      sessionId = data.session_id;
+      localStorage.setItem("pen2_session_id", sessionId);
+      return sessionId;
+    }
+
+    async function typeInto(el, fullText){
+      const enabled = !!document.getElementById("typing")?.checked;
+      if (!enabled){
+        el.textContent = fullText || "";
+        scrollToBottom();
+        return;
+      }
+
+      el.textContent = "";
+      const text = fullText || "";
+
+      // chunk typing: smooth + fast enough to feel premium
+      const chunkSize = 2;
+      let i = 0;
+
+      while (i < text.length){
+        el.textContent += text.slice(i, i + chunkSize);
+        i += chunkSize;
+
+        const nearBottom = (chatEl.scrollHeight - (chatEl.scrollTop + chatEl.clientHeight)) < 140;
+        if (nearBottom) scrollToBottom();
+
+        const delay = 10 + Math.floor(Math.random() * 14); // 10..23ms
+        await sleep(delay);
+      }
+    }
+
+    async function sendToEngine(text){
+      setStatus("thinking", "thinking");
+      playBeep("send");
+
+      const debug = !!document.getElementById("debug")?.checked;
+      const slowMode = !!document.getElementById("slowMode")?.checked;
+
+      const thinkingRow = addThinking();
+
+      // Deliberate pause to avoid “form submit” vibe
+      if (slowMode){
+        await sleep(220);
+        await sleep(180 + Math.floor(Math.random() * 220));
+      }
+
+      await ensureSession();
 
       const payload = {
         user: userProfile,
         measurements: [],
         context: {
+          session_id: sessionId,
           chat_text: text,
           chat_state: chatState,
-          debug: debug
-        }
+          debug: debug,
+        },
       };
 
       const res = await fetch("/v1/report", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
-        body: JSON.stringify(payload)
+        body: JSON.stringify(payload),
       });
 
-      const data = await res.json();
+      const raw = await res.text();
+      if (!res.ok){
+        if (thinkingRow) thinkingRow.remove();
+        addBubble("pen", `Server error ${res.status}: ${raw}`);
+        setStatus("error", "error");
+        return;
+      }
+
+      const data = JSON.parse(raw);
       const report = data.report || {};
       const chat = report.chat || {};
 
-      // update local state
       chatState = chat.state || chatState;
-
       setAudit(report);
-      addMsg("pen", chat.assistant_message || "(no message)", `phase=${chat.phase} done=${chat.done}`);
 
-      statusPill.textContent = "ready";
+      if (slowMode){
+        await sleep(180 + Math.floor(Math.random() * 220));
+      }
+
+      if (thinkingRow) thinkingRow.remove();
+
+      const meta = `phase=${chat.phase} done=${chat.done} • session=${sessionId}`;
+      const b = addBubble("pen", "", meta);
+
+      // Type assistant message (premium feel)
+      await typeInto(b.bubbleText, (chat.assistant_message || "(no message)"));
+
+      // meta already present; keep it below
+      playBeep("recv");
+      setStatus("ready", "ready");
     }
 
-    document.getElementById("send").addEventListener("click", async () => {
-      const input = document.getElementById("text");
-      const text = input.value.trim();
-      if (!text) return;
-      addMsg("me", text);
-      input.value = "";
-      await send(text);
-    });
+    function openDetails(){
+      overlay.classList.add("open");
+      drawer.classList.add("open");
+    }
+    function closeDetails(){
+      overlay.classList.remove("open");
+      drawer.classList.remove("open");
+    }
 
-    document.getElementById("text").addEventListener("keydown", async (e) => {
-      if (e.key === "Enter") document.getElementById("send").click();
-    });
-
-    document.getElementById("reset").addEventListener("click", () => {
+    async function doReset(){
       chatState = null;
       chatEl.innerHTML = "";
       auditEl.textContent = "{}";
       pathPill.textContent = "path";
-      statusPill.textContent = "ready";
-      addMsg("pen", "Hi. I’m Pen. (reset done)");
-    });
+      setStatus("ready", "ready");
 
-    // start: get first assistant message (empty user text)
-    (async function boot() {
-      addMsg("pen", "Loading demo…");
-      await send("");
-    })();
+      await ensureSession();
+      await fetch("/v1/session/reset", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ session_id: sessionId }),
+      });
+
+      addBubble("pen", "Reset complete. Starting fresh…");
+      await sendToEngine("");
+    }
+
+    window.addEventListener("DOMContentLoaded", () => {
+      chatEl = document.getElementById("chat");
+      auditEl = document.getElementById("audit");
+      statusTextEl = document.getElementById("statusText");
+      statusDotEl = document.getElementById("statusDot");
+      pathPill = document.getElementById("pathPill");
+
+      textInput = document.getElementById("text");
+      sendTopBtn = document.getElementById("sendTop");
+      resetTopBtn = document.getElementById("resetTop");
+
+      openDrawerBtn = document.getElementById("openDrawer");
+      closeDrawerBtn = document.getElementById("closeDrawer");
+      drawer = document.getElementById("drawer");
+      overlay = document.getElementById("drawerOverlay");
+
+      if (!chatEl || !auditEl || !statusTextEl || !statusDotEl || !pathPill || !textInput || !sendTopBtn){
+        console.error("Missing required DOM elements");
+        return;
+      }
+
+      // Send
+      async function handleSend(){
+        const text = textInput.value.trim();
+        if (!text) return;
+        addBubble("me", text);
+        textInput.value = "";
+        await sendToEngine(text);
+      }
+
+      sendTopBtn.addEventListener("click", handleSend);
+      textInput.addEventListener("keydown", (e) => {
+        if (e.key === "Enter") handleSend();
+      });
+
+      // Reset
+      resetTopBtn?.addEventListener("click", doReset);
+
+      // Drawer
+      openDrawerBtn?.addEventListener("click", openDetails);
+      closeDrawerBtn?.addEventListener("click", closeDetails);
+      overlay?.addEventListener("click", closeDetails);
+      window.addEventListener("keydown", (e) => {
+        if (e.key === "Escape") closeDetails();
+      });
+
+      // Boot
+      (async function boot(){
+        addBubble("pen", "Welcome. Tell me what’s going on, and I’ll guide you step by step.");
+        await sendToEngine("");
+      })();
+    });
   </script>
 </body>
 </html>
