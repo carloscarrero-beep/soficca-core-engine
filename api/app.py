@@ -1,3 +1,13 @@
+import soficca_core.engine as engine
+import soficca_core.interpret_en as interpret_mod
+import os
+
+print("ENGINE FILE:", engine.__file__)
+print("INTERPRET FILE:", interpret_mod.__file__)
+print("OPENAI KEY LOADED:", bool(os.getenv("OPENAI_API_KEY")))
+print("NLU MODE:", os.getenv("SOFICCA_NLU_MODE"))
+print("NLU ENABLED:", os.getenv("SOFICCA_OPENAI_NLU_ENABLED"))
+
 import io
 import csv
 from fastapi import HTTPException
@@ -160,8 +170,8 @@ def v1_report(payload: CoreRequest):
             json.dumps(report.get("flags", [])),
             json.dumps(report.get("reasons", [])),
             json.dumps(report.get("recommendations", [])),
-            json.dumps(report.get("trace", {})),
-            json.dumps(chat.get("state", {})),
+            json.dumps(report.get("trace", {}), default=str),
+            json.dumps(chat.get("state", {}), default=str),
         ),
     )
     conn.commit()
@@ -285,3 +295,4 @@ def export_session_csv(session_id: str):
         media_type="text/csv",
         headers={"Content-Disposition": f'attachment; filename="{filename}"'}
     )
+

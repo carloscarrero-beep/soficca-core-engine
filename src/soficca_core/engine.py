@@ -1,4 +1,5 @@
 # src/soficca_core/engine.py
+import re
 from soficca_core.normalization import normalize
 from soficca_core.rules import apply_rules
 from soficca_core.validation import validate_input
@@ -6,7 +7,6 @@ from soficca_core.validation import validate_input
 from soficca_core.chat_state import (
     new_state,
     set_slot,
-    get_slot,
     MODE_SAFETY_LOCK,
     PHASE_END,
     PHASE_INTERPRETATION,
@@ -26,9 +26,7 @@ from soficca_core.interpret_en import interpret
 from soficca_core.safety_en import detect_red_flags
 from soficca_core import messages_en as messages
 
-from soficca_core.nlu_specs import QUESTION_SPECS
-
-ENGINE_VERSION = "0.1.0"
+ENGINE_VERSION = "0.2.1"
 RULESET_VERSION = "0.1.0"
 
 
@@ -41,6 +39,11 @@ def uniq_keep_order(items):
             seen.add(x)
     return out
 
+
+def _nullish_to_none(v):
+    if isinstance(v, str) and v.strip().lower() in ("null", "none", "n/a", "na"):
+        return None
+    return v
 
 def _empty_report():
     return {
@@ -73,26 +76,58 @@ def _chat_state_public(state):
     }
 
 
-def _apply_slot_fills(state, slot_fills):
-    """
-    Apply any slot fills extracted by NLU.
-    Safety: never overwrite a non-empty slot.
-    """
-    if not slot_fills:
-        return state
+def _update_trace_from_parse(report, parsed):
+    try:
+        t = (parsed or {}).get("_trace") or {}
+        if not t:
+            return
+        trace = report.setdefault("trace", {})
+        for k in ("nlu_used", "nlu_meta", "nlu_confidence"):
+            if k in t:
+                trace[k] = t.get(k)
+    except Exception:
+        return
 
+
+def _apply_slot_fills(state, slot_fills, *, fill_only_if_empty=True):
+    if not slot_fills:
+        return
+    slots = state.get("slots") or {}
     for k, v in (slot_fills or {}).items():
+        v = _nullish_to_none(v)
         if v is None:
             continue
-        # Only fill if missing (prevents silent overwrites)
-        if get_slot(state, k) in (None, "", []):
-            set_slot(state, k, v)
-    return state
+        if fill_only_if_empty and slots.get(k) not in (None, "", []):
+            continue
+        set_slot(state, k, v)
 
 
-def _question_context(question_id):
-    spec = QUESTION_SPECS.get(question_id) or {}
-    return spec.get("question_text"), spec.get("allowed_values")
+def _increment_repair_count(state, question_id: str) -> int:
+    meta = state.setdefault("meta", {})
+    rc = meta.setdefault("repair_counts", {})
+    rc[question_id] = int(rc.get(question_id, 0)) + 1
+    return rc[question_id]
+
+
+def _repair_count(state, question_id: str) -> int:
+    meta = state.get("meta") or {}
+    rc = meta.get("repair_counts") or {}
+    return int(rc.get(question_id, 0))
+
+
+_Q_RE = re.compile(
+    r"^\s*(what|why|how|can you|could you|should i|do you|is it|are you|"
+    r"que|qué|por qué|porque|cómo|como|puedes|debo)\b",
+    re.IGNORECASE,
+)
+
+
+def _looks_like_question(text: str) -> bool:
+    if not text:
+        return False
+    if "?" in text:
+        return True
+    return bool(_Q_RE.search(text))
 
 
 def generate_report(input_data):
@@ -125,12 +160,13 @@ def generate_report(input_data):
         meta.setdefault("welcomed", False)
         meta.setdefault("awaiting_files", False)
         meta.setdefault("unknown_slot_writes", [])
-        meta.setdefault("repair_counts", {})  # per-question repair counter (anti-loop)
+        meta.setdefault("repair_counts", {})
 
         assistant_message = None
-        global_intent = interpret(chat_text, "global")
 
-        # ---------------- SAFETY LOCK ----------------
+        global_intent = interpret(chat_text, "global", state=state)
+        _update_trace_from_parse(report, global_intent)
+
         red_flags_now = detect_red_flags(chat_text)
         if red_flags_now:
             state["mode"] = MODE_SAFETY_LOCK
@@ -140,13 +176,15 @@ def generate_report(input_data):
         # ---------------- SAFETY FLOW ----------------
         if state.get("mode") == MODE_SAFETY_LOCK:
             last_q = state.get("last_question_id")
-
+            parsed = None
             if last_q == Q_COUNTRY:
-                qt, av = _question_context(Q_COUNTRY)
-                parsed = interpret(chat_text, Q_COUNTRY, state=state, question_text=qt, allowed_values=av)
-                # slot fills (if any)
-                state = _apply_slot_fills(state, parsed.get("slot_fills"))
-                if parsed.get("type") == "answer" and parsed.get("value"):
+                parsed = interpret(chat_text, Q_COUNTRY, state=state)
+                # normalize nullish strings from NLU
+                if isinstance(parsed, dict):
+                    parsed["value"] = _nullish_to_none(parsed.get("value"))
+                _update_trace_from_parse(report, parsed)
+                _apply_slot_fills(state, (parsed or {}).get("slot_fills") or {}, fill_only_if_empty=False)
+                if parsed.get("type") == "answer" and parsed.get("value") is not None:
                     set_slot(state, "country", parsed["value"])
                     state["last_question_id"] = None
 
@@ -159,7 +197,11 @@ def generate_report(input_data):
                     state["last_question_id"] = Q_COUNTRY
                     done = False
                 else:
-                    assistant_message = messages.meta_ack_waiting_files() + "\n\n" + messages.safety_escalation_with_country(country)
+                    assistant_message = (
+                        messages.meta_ack_waiting_files()
+                        + "\n\n"
+                        + messages.safety_escalation_with_country(country)
+                    )
                     state["last_question_id"] = None
                     state["phase"] = PHASE_END
                     done = True
@@ -179,15 +221,39 @@ def generate_report(input_data):
 
             report["flags"] = uniq_keep_order((decision.get("flags", []) or []) + (state.get("safety_flags") or []))
             report["reasons"] = (decision.get("reasons", []) or []) + ["Red flag signals detected; escalation required."]
-            report["recommendations"] = (decision.get("recommendations", []) or []) + ["Escalate to human support / urgent care guidance."]
-            report["trace"] = {
-                "intermittent_pattern": signals.get("intermittent_pattern"),
-                "morning_erection_reduced": signals.get("morning_erection_reduced"),
-                "user_requests_meds": signals.get("user_requests_meds"),
-            }
+            report["recommendations"] = (decision.get("recommendations", []) or []) + [
+                "Escalate to human support / urgent care guidance."
+            ]
+
+            last_nlu = (state.get("meta") or {}).get("last_nlu") or {}
+            report["trace"].update(
+                {
+                    "intermittent_pattern": signals.get("intermittent_pattern"),
+                    "morning_erection_reduced": signals.get("morning_erection_reduced"),
+                    "user_requests_meds": signals.get("user_requests_meds"),
+                }
+            )
+            if last_nlu:
+                report["trace"].update(
+                    {
+                        "nlu_used": last_nlu.get("nlu_used"),
+                        "nlu_error": last_nlu.get("nlu_error"),
+                        "nlu_meta": last_nlu.get("nlu_meta"),
+                        "nlu_stage": last_nlu.get("stage"),
+                        "nlu_question_id": last_nlu.get("question_id"),
+                        "nlu_confidence": last_nlu.get("confidence"),
+                    }
+                )
+
             report["path"] = "PATH_ESCALATE_HUMAN"
 
-            chat_payload = {"phase": state.get("phase"), "assistant_message": assistant_message, "last_question_id": state.get("last_question_id"), "done": done, "intent": global_intent.get("type")}
+            chat_payload = {
+                "phase": state.get("phase"),
+                "assistant_message": assistant_message,
+                "last_question_id": state.get("last_question_id"),
+                "done": done,
+                "intent": global_intent.get("type"),
+            }
             chat_payload["state"] = state if debug else _chat_state_public(state)
             report["chat"] = chat_payload
 
@@ -195,13 +261,20 @@ def generate_report(input_data):
 
         # ---------------- NORMAL FLOW ----------------
 
+
+
+        # If the conversation already ended and user says thanks, acknowledge (do not reopen flow).
+        if state.get("phase") == PHASE_END and global_intent.get("type") == "gratitude":
+            name = _get_name_from_state(state)
+            assistant_message = messages.end_thanks(name=name)
         if meta.get("awaiting_files") and global_intent.get("type") not in ("meta_pause", "file_handoff"):
             meta["awaiting_files"] = False
 
-        # Meta pause / file handoff: ack and keep the same pending question
+        last_q = state.get("last_question_id")
+
+        # Meta / file: ack then keep going
         if global_intent.get("type") in ("meta_pause", "file_handoff"):
             meta["awaiting_files"] = True
-            last_q = state.get("last_question_id")
             if last_q:
                 assistant_message = messages.meta_ack_waiting_files() + "\n\n" + render_question(state, last_q)
             else:
@@ -213,19 +286,38 @@ def generate_report(input_data):
                 else:
                     assistant_message = messages.meta_ack_waiting_files()
 
-        # Greeting: greet back, then re-ask pending question
+        # Greeting: never "steals" the turn. If it answered pending question, ask next question same turn.
         if assistant_message is None and global_intent.get("type") == "greeting":
-            last_q = state.get("last_question_id")
             name = _get_name_from_state(state)
+
             if last_q:
-                assistant_message = messages.greet_back(name) + "\n\n" + render_question(state, last_q)
+                parsed = interpret(chat_text, last_q, state=state)
+                # normalize nullish strings from NLU
+                if isinstance(parsed, dict):
+                    parsed["value"] = _nullish_to_none(parsed.get("value"))
+                _update_trace_from_parse(report, parsed)
+                _apply_slot_fills(state, (parsed or {}).get("slot_fills") or {}, fill_only_if_empty=False)
+
+                if parsed.get("type") == "answer" and parsed.get("value") is not None:
+                    set_slot(state, last_q, parsed.get("value"))
+                    state["last_question_id"] = None
+                    name = _get_name_from_state(state)
+                    state = ensure_phase_progress(state)
+
+                    qid = next_question_id(state)
+                    if qid:
+                        state["last_question_id"] = qid
+                        assistant_message = messages.greet_back(name) + "\n\n" + render_question(state, qid)
+                    else:
+                        assistant_message = messages.greet_back(name)
+                else:
+                    assistant_message = messages.greet_back(name) + "\n\n" + render_question(state, last_q)
             else:
-                state = ensure_phase_progress(state)
+                assistant_message = messages.greet_back(name)
 
         if assistant_message is None:
             state = ensure_phase_progress(state)
 
-        # Interpretation bridge
         if assistant_message is None and state.get("phase") == PHASE_INTERPRETATION:
             assistant_message = render_interpretation_and_action(state)
 
@@ -233,41 +325,31 @@ def generate_report(input_data):
             last_q = state.get("last_question_id")
 
             if last_q:
-                # Anti-loop: after 2 repairs, force mini for better disambiguation
-                repairs = int((meta.get("repair_counts") or {}).get(last_q, 0))
-                force_model = "mini" if repairs >= 2 else None
+                parsed = interpret(chat_text, last_q, state=state)
+                # normalize nullish strings from NLU
+                if isinstance(parsed, dict):
+                    parsed["value"] = _nullish_to_none(parsed.get("value"))
+                _update_trace_from_parse(report, parsed)
+                _apply_slot_fills(state, (parsed or {}).get("slot_fills") or {}, fill_only_if_empty=False)
 
-                qt, av = _question_context(last_q)
-                parsed = interpret(chat_text, last_q, state=state, question_text=qt, allowed_values=av, force_model=force_model)
+                # If NLU explicitly asks for repair, do not advance.
+                if parsed.get("needs_repair"):
+                    name = _get_name_from_state(state)
+                    c = _repair_count(state, last_q)
+                    if c == 0:
+                        _increment_repair_count(state, last_q)
+                        assistant_message = messages.clarify_once_for_question(last_q, name=name)
+                    else:
+                        assistant_message = render_repair_question(state, last_q)
 
-                # Apply multi-slot fills first (big win)
-                state = _apply_slot_fills(state, parsed.get("slot_fills"))
 
-                # If NLU filled the last_q slot via slot_fills, treat as answer.
-                if parsed.get("type") != "answer":
-                    maybe_v = (parsed.get("slot_fills") or {}).get(last_q)
-                    if maybe_v is not None:
-                        parsed = {"type": "answer", "value": maybe_v, "confidence": "moderate"}
-
-                if parsed.get("type") == "user_question":
+                if parsed.get("type") == "user_question" and _looks_like_question((parsed.get("value") or chat_text)):
                     assistant_message = messages.answer_user_question_brief() + "\n\n" + render_question(state, last_q)
 
                 elif parsed.get("type") == "emotional":
                     assistant_message = messages.emotional_validation() + "\n\n" + render_question(state, last_q)
 
-                elif parsed.get("type") != "answer" or parsed.get("value") is None:
-                    # repair loop counter
-                    rc = meta.setdefault("repair_counts", {})
-                    rc[last_q] = int(rc.get(last_q, 0)) + 1
-
-                    assistant_message = render_repair_question(state, last_q)
-
-                else:
-                    # reset repair count on successful parse
-                    rc = meta.setdefault("repair_counts", {})
-                    rc[last_q] = 0
-
-                    # Route choice finalize
+                elif parsed.get("type") == "answer" and parsed.get("value") is not None:
                     if last_q == Q_ROUTE_CHOICE:
                         choice = parsed.get("value")
                         name = _get_name_from_state(state)
@@ -284,18 +366,25 @@ def generate_report(input_data):
                             assistant_message = messages.end_meds_options(name=name, needs_eval_parallel=needs_eval_parallel)
                         else:
                             assistant_message = messages.end_support_plan(name=name)
-
                     else:
                         set_slot(state, last_q, parsed["value"])
+                        state["last_question_id"] = None
                         assistant_message = None
 
-            # Meds intent any time
+                else:
+                    name = _get_name_from_state(state)
+                    c = _repair_count(state, last_q)
+                    if c == 0:
+                        _increment_repair_count(state, last_q)
+                        assistant_message = messages.clarify_once_for_question(last_q, name=name)
+                    else:
+                        assistant_message = render_repair_question(state, last_q)
+
             if assistant_message is None and state.get("phase") != PHASE_END:
                 if global_intent.get("type") == "meds_intent":
                     set_slot(state, "wants_meds", True)
                     assistant_message = render_meds_step_and_close(state)
 
-            # Ask next question
             if assistant_message is None and state.get("phase") != PHASE_END:
                 state = ensure_phase_progress(state)
                 if state.get("phase") == PHASE_INTERPRETATION:
@@ -308,21 +397,35 @@ def generate_report(input_data):
                     else:
                         assistant_message = messages.clarify_soft()
 
-        # Decision layer
         signals = normalize(state.get("slots", {}))
         decision = apply_rules(signals)
 
         report["flags"] = uniq_keep_order(decision.get("flags", []))
         report["recommendations"] = decision.get("recommendations", [])
         report["reasons"] = decision.get("reasons", [])
-        report["trace"] = {
-            "intermittent_pattern": signals.get("intermittent_pattern"),
-            "morning_erection_reduced": signals.get("morning_erection_reduced"),
-            "user_requests_meds": signals.get("user_requests_meds"),
-        }
+        last_nlu = (state.get("meta") or {}).get("last_nlu") or {}
+
+        report["trace"].update(
+            {
+                "intermittent_pattern": signals.get("intermittent_pattern"),
+                "morning_erection_reduced": signals.get("morning_erection_reduced"),
+                "user_requests_meds": signals.get("user_requests_meds"),
+            }
+        )
+        if last_nlu:
+            report["trace"].update(
+                {
+                    "nlu_used": last_nlu.get("nlu_used"),
+                    "nlu_error": last_nlu.get("nlu_error"),
+                    "nlu_meta": last_nlu.get("nlu_meta"),
+                    "nlu_stage": last_nlu.get("stage"),
+                    "nlu_question_id": last_nlu.get("question_id"),
+                    "nlu_confidence": last_nlu.get("confidence"),
+                }
+            )
+
         report["path"] = decision.get("path", "PATH_MORE_QUESTIONS")
 
-        # Eval-first override
         if state.get("phase") != PHASE_END and report["path"] == "PATH_EVAL_FIRST":
             name = _get_name_from_state(state)
             state["phase"] = PHASE_END
@@ -343,14 +446,12 @@ def generate_report(input_data):
         return {"ok": True, "errors": [], "normalized_input": normalized_input, "report": report}
 
     except Exception as e:
-        errors = [{
-            "code": "UNEXPECTED_ERROR",
-            "message": "Unexpected error while generating report",
-            "path": "$",
-            "meta": {"type": type(e).__name__},
-        }]
+        errors = [
+            {
+                "code": "UNEXPECTED_ERROR",
+                "message": "Unexpected error while generating report",
+                "path": "$",
+                "meta": {"type": type(e).__name__},
+            }
+        ]
         return {"ok": False, "errors": errors, "normalized_input": {}, "report": _empty_report()}
-
-
-
-

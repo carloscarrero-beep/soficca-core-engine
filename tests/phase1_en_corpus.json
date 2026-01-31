@@ -1,0 +1,29 @@
+{
+  "version": "phase1_en_corpus_v2",
+  "items": [
+    {
+      "phase": "INTRO",
+      "last_question_id": "name",
+      "user_text": "Hi Pen, you can call me Carlos",
+      "expected": "answer:name"
+    },
+    {
+      "phase": "INTRO",
+      "last_question_id": "gender_identity",
+      "user_text": "ok",
+      "expected": "clarify_once_or_repair"
+    },
+    {
+      "phase": "REASON",
+      "last_question_id": "reason",
+      "user_text": "maybe i feel I'm losing my confidence",
+      "expected": "answer:reason"
+    },
+    {
+      "phase": "REASON",
+      "last_question_id": "reason",
+      "user_text": "im telling you",
+      "expected": "clarify_once:reason"
+    }
+  ]
+}

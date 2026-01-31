@@ -1,3 +1,5 @@
+# src/soficca_core/messages_en.py
+
 def safe_space(name):
     who = "Pen²"
     if name:
@@ -75,7 +77,6 @@ def ask_morning_erection():
 
 
 def clarify_soft():
-    # Keep it as a generic fallback, but we will STOP using it for every repair.
     return (
         "I get it — sometimes it's hard to put into words.\n"
         "Let’s make it simpler."
@@ -94,15 +95,6 @@ def emotional_validation():
     return (
         "That makes sense. This can feel heavy.\n"
         "We'll take it calmly, step by step."
-    )
-
-
-def escalate_human_or_emergency():
-    return (
-        "Thanks for telling me. Based on what you shared, I’m not comfortable continuing this as a self-guided flow.\n\n"
-        "The safest next step is to get immediate human help.\n"
-        "If you feel you’re in danger or have severe symptoms, please seek urgent care or emergency services now.\n\n"
-        "If you want, tell me your country and whether you can talk to a clinician right now, and I’ll guide you to the safest next step."
     )
 
 
@@ -149,6 +141,13 @@ def ask_country_general():
     return "And what country are you in right now?"
 
 
+
+def end_thanks(name=None):
+    who = "Pen²"
+    if name:
+        return f"You’re welcome, {name}."
+    return "You’re welcome."
+
 def meta_ack_waiting_files():
     return (
         "Got it — take your time.\n"
@@ -165,7 +164,7 @@ def meta_ack_waiting_then_ask_country():
 
 
 # -----------------------------
-# Repair prompts (critical!)
+# Repair prompts
 # -----------------------------
 def repair_reason(name=None):
     n = f", {name}" if name else ""
@@ -259,7 +258,39 @@ def repair_for_question(question_id, name=None):
         return ask_name()
     if question_id == "country":
         return ask_country_general()
-    # fallback
+    return clarify_soft()
+
+
+# -----------------------------
+# Clarify-once prompts
+# -----------------------------
+def clarify_once_for_question(question_id, name=None):
+    # 1 gentle clarification before structured repair to prevent loops
+    if question_id == "reason":
+        return (
+            "Got it.\n\n"
+            "When you say that, which is closest?\n"
+            "• performance changes\n"
+            "• losing confidence\n"
+            "• finishing too fast\n"
+            "• something else"
+        )
+    if question_id == "main_issue":
+        return "Just to be sure — is it more: lose erection, doesn’t last long enough, or finish too fast?"
+    if question_id == "frequency":
+        return "Quick check: every time, or good days / bad days?"
+    if question_id == "desire":
+        return "When you say that — is your desire still there, or lower than before?"
+    if question_id == "stress":
+        return "Would you rate stress/fatigue lately as low, moderate, or high?"
+    if question_id == "morning_erection":
+        return "Compared to before: no change, reduced, or rarely?"
+    if question_id == "gender_identity":
+        return "Just to confirm: male, female, non-binary, or prefer not to say?"
+    if question_id == "country":
+        return "What country are you in right now?"
+    if question_id == "name":
+        return "What name would you like me to use?"
     return clarify_soft()
 
 
@@ -343,4 +374,3 @@ def meds_intro():
         "If you'd like, I can show you available options, what requires medical authorization, "
         "and how we would move forward."
     )
-

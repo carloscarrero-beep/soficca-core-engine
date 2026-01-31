@@ -3,56 +3,91 @@
 <head>
   <meta charset="utf-8" />
   <meta name="viewport" content="width=device-width,initial-scale=1" />
-  <title>Pen² Demo</title>
-
+  <title>Pen²</title>
   <style>
+    /* ------------------------------------------------------------
+      Pen² — Premium Messages UI (Apple-inspired)
+      - Clean typography (SF Pro on Apple / Segoe UI Variable on Win)
+      - Single centered surface (no dashboard feel)
+      - iMessage-like bubbles + typing dots
+      - Composer with integrated circular send (↑)
+      - Details in a side sheet (iOS Settings vibe)
+    ------------------------------------------------------------ */
+
     :root{
-      /* Apple-ish neutrals */
       --bg: #f5f5f7;
-      --card: rgba(255,255,255,.92);
-      --cardSolid: #ffffff;
+      --surface: rgba(255,255,255,.86);
+      --surface-solid: #ffffff;
+
+      --text: #0b0b10;
+      --muted: rgba(11,11,16,.62);
+      --muted-2: rgba(11,11,16,.42);
+
       --border: rgba(0,0,0,.08);
-      --border2: rgba(0,0,0,.12);
-      --text: #111111;
-      --muted: rgba(17,17,17,.60);
-      --muted2: rgba(17,17,17,.40);
+      --border-2: rgba(0,0,0,.12);
 
-      /* Accent (iOS blue) */
-      --accent: #0A84FF;
-      --accent2: #0077ED;
-      --accentSoft: rgba(10,132,255,.10);
+      --blue: #0A84FF;         /* iOS blue */
+      --blue-soft: rgba(10,132,255,.12);
 
-      /* Shadows + radii */
-      --shadow: 0 18px 60px rgba(0,0,0,.10);
-      --shadow2: 0 10px 30px rgba(0,0,0,.08);
-      --shadow3: 0 6px 16px rgba(0,0,0,.06);
+      --green: #34C759;
+      --amber: #FF9F0A;
+      --red: #FF3B30;
 
-      --r-xl: 24px;
-      --r-lg: 20px;
-      --r-md: 16px;
-      --r-sm: 12px;
+      --shadow-lg: 0 18px 60px rgba(0,0,0,.10);
+      --shadow-md: 0 10px 26px rgba(0,0,0,.08);
+      --shadow-sm: 0 6px 16px rgba(0,0,0,.06);
 
-      --maxW: 980px;
+      --r-card: 28px;
+      --r-bubble: 22px;
+      --r-pill: 999px;
+
+      --maxW: 880px;
       --pad: 18px;
     }
 
-    *{ box-sizing:border-box; }
-    html, body { height:100%; }
+    *{ box-sizing: border-box; }
+    html, body { height: 100%; }
+
     body{
       margin:0;
       color: var(--text);
-      font-family: ui-sans-serif, system-ui, -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, Helvetica, Arial;
+      /* Premium product typography stack */
+      font-family:
+        ui-sans-serif,
+        system-ui,
+        -apple-system,
+        BlinkMacSystemFont,
+        "SF Pro Display",
+        "SF Pro Text",
+        "Segoe UI Variable",
+        "Segoe UI",
+        Roboto,
+        Helvetica,
+        Arial;
+      letter-spacing: .01em;
+      font-feature-settings: "kern" 1, "liga" 1, "calt" 1;
       background:
-        radial-gradient(900px 520px at 18% 8%, rgba(10,132,255,.10), transparent 60%),
-        radial-gradient(900px 520px at 82% 10%, rgba(10,132,255,.06), transparent 60%),
+        radial-gradient(1100px 540px at 20% 8%, rgba(10,132,255,.12), transparent 60%),
+        radial-gradient(900px 540px at 82% 12%, rgba(10,132,255,.07), transparent 60%),
         var(--bg);
       overflow:hidden;
     }
 
-    /* Top Bar */
+    /* Subtle scrollbars (desktop) */
+    .chat::-webkit-scrollbar, pre::-webkit-scrollbar { width: 10px; height: 10px; }
+    .chat::-webkit-scrollbar-thumb, pre::-webkit-scrollbar-thumb {
+      background: rgba(0,0,0,.16);
+      border-radius: 999px;
+      border: 3px solid rgba(255,255,255,.70);
+    }
+    .chat::-webkit-scrollbar-track, pre::-webkit-scrollbar-track { background: transparent; }
+
+    /* ------------------------------------------------------------
+      Topbar: minimal, premium
+    ------------------------------------------------------------ */
     .topbar{
       max-width: var(--maxW);
-      margin: 14px auto 12px;
+      margin: 16px auto 12px;
       padding: 0 var(--pad);
       display:flex;
       align-items:center;
@@ -60,115 +95,107 @@
       gap: 12px;
     }
 
-    .titleBlock{
+    .brand{
       display:flex;
       flex-direction:column;
       gap: 2px;
       user-select:none;
     }
-    .titleBlock .title{
-      font-size: 14px;
-      font-weight: 800;
-      letter-spacing: .2px;
+    .brand .title{
       margin:0;
-      line-height: 1.1;
+      font-size: 15px;
+      font-weight: 850;
+      letter-spacing: .02em;
+      line-height: 1.05;
     }
-    .titleBlock .sub{
+    .brand .sub{
       font-size: 12px;
       color: var(--muted);
-      line-height: 1.1;
+      line-height: 1.15;
     }
 
     .topActions{
       display:flex;
-      gap: 10px;
       align-items:center;
-      justify-content:flex-end;
-      flex-wrap: wrap;
+      gap: 10px;
     }
 
-    /* Status chip */
+    /* Status: clean dot + label (no bulky chip) */
     .status{
       display:flex;
       align-items:center;
       gap: 8px;
-      padding: 8px 12px;
-      border-radius: 999px;
-      background: rgba(255,255,255,.75);
-      border: 1px solid var(--border);
+      padding: 8px 10px;
+      border-radius: var(--r-pill);
+      background: rgba(255,255,255,.62);
+      border: 1px solid rgba(0,0,0,.08);
       backdrop-filter: blur(12px);
-      box-shadow: var(--shadow3);
+      box-shadow: var(--shadow-sm);
       font-size: 12px;
       color: var(--muted);
     }
-    .dot{
+    .statusDot{
       width: 8px; height: 8px;
       border-radius: 999px;
-      background: #34C759;
-      box-shadow: 0 0 0 4px rgba(52,199,89,.12);
+      background: var(--green);
+      box-shadow: 0 0 0 5px rgba(52,199,89,.12);
+      transition: background .15s ease, box-shadow .15s ease;
     }
-    .dot.thinking{
-      background:#FF9F0A;
-      box-shadow: 0 0 0 4px rgba(255,159,10,.14);
+    .statusDot.thinking{
+      background: var(--amber);
+      box-shadow: 0 0 0 5px rgba(255,159,10,.14);
     }
-    .dot.error{
-      background:#FF3B30;
-      box-shadow: 0 0 0 4px rgba(255,59,48,.14);
+    .statusDot.error{
+      background: var(--red);
+      box-shadow: 0 0 0 5px rgba(255,59,48,.14);
     }
 
-    /* Buttons (premium pills) */
-    .btn{
+    /* Icon button: transparent, premium */
+    .iconBtn{
       appearance:none;
-      border: 1px solid var(--border2);
-      background: rgba(255,255,255,.82);
-      color: rgba(17,17,17,.92);
-      padding: 10px 14px;
+      border: 1px solid rgba(0,0,0,.10);
+      background: rgba(255,255,255,.58);
+      color: rgba(11,11,16,.86);
+      width: 38px; height: 38px;
       border-radius: 999px;
-      font-size: 13px;
-      font-weight: 800;
-      letter-spacing: .1px;
+      box-shadow: var(--shadow-sm);
+      backdrop-filter: blur(12px);
       cursor:pointer;
-      box-shadow: var(--shadow3);
+      display:grid;
+      place-items:center;
       transition: transform .08s ease, filter .15s ease, background .15s ease, box-shadow .15s ease;
-      user-select:none;
     }
-    .btn:hover{
+    .iconBtn:hover{
       filter: brightness(1.02);
+      background: rgba(255,255,255,.72);
       box-shadow: 0 10px 24px rgba(0,0,0,.10);
     }
-    .btn:active{ transform: translateY(1px); }
+    .iconBtn:active{ transform: translateY(1px); }
 
-    .btnPrimary{
-      background: linear-gradient(180deg, rgba(10,132,255,.96), rgba(0,119,237,.96));
-      border-color: rgba(0,119,237,.45);
-      color: white;
-      box-shadow: 0 14px 34px rgba(10,132,255,.22);
-    }
-    .btnPrimary:hover{
-      box-shadow: 0 16px 42px rgba(10,132,255,.26);
+    .dotsIcon{
+      width: 18px; height: 18px;
+      display:block;
     }
 
-    .btnGhost{
-      background: rgba(255,255,255,.65);
-    }
-
-    /* Main Card */
+    /* ------------------------------------------------------------
+      Main surface (single card)
+    ------------------------------------------------------------ */
     .shell{
       max-width: var(--maxW);
       margin: 0 auto;
       padding: 0 var(--pad) 18px;
-      height: calc(100vh - 72px);
+      height: calc(100vh - 78px);
       display:flex;
       flex-direction:column;
       min-height: 0;
     }
 
     .card{
-      background: var(--card);
-      border: 1px solid var(--border);
-      border-radius: var(--r-xl);
-      box-shadow: var(--shadow);
-      backdrop-filter: blur(14px);
+      background: var(--surface);
+      border: 1px solid rgba(0,0,0,.07);
+      border-radius: var(--r-card);
+      box-shadow: var(--shadow-lg);
+      backdrop-filter: blur(16px);
       overflow:hidden;
       display:flex;
       flex-direction:column;
@@ -180,44 +207,48 @@
       display:flex;
       align-items:center;
       justify-content:space-between;
-      border-bottom: 1px solid var(--border);
-      background: rgba(255,255,255,.74);
+      border-bottom: 1px solid rgba(0,0,0,.07);
+      background: rgba(255,255,255,.68);
     }
-    .cardHeader .left{
+    .headerLeft{
       display:flex;
       align-items:center;
       gap: 10px;
       min-width: 0;
     }
-    .cardHeader .hTitle{
-      font-weight: 900;
-      font-size: 13px;
-      letter-spacing: .2px;
+    .hTitle{
       margin:0;
-      color: rgba(17,17,17,.92);
-      white-space: nowrap;
+      font-size: 13px;
+      font-weight: 900;
+      letter-spacing: .02em;
+      color: rgba(11,11,16,.90);
+      white-space:nowrap;
     }
     .pathPill{
       font-size: 12px;
       padding: 7px 10px;
-      border-radius: 999px;
-      background: var(--accentSoft);
-      border: 1px solid rgba(10,132,255,.18);
+      border-radius: var(--r-pill);
+      background: rgba(10,132,255,.10);
+      border: 1px solid rgba(10,132,255,.16);
       color: rgba(10,132,255,.92);
       font-weight: 900;
-      max-width: 260px;
+      max-width: 280px;
       overflow:hidden;
       text-overflow: ellipsis;
       white-space: nowrap;
     }
 
-    /* Chat area */
+    /* ------------------------------------------------------------
+      Chat
+    ------------------------------------------------------------ */
     .chat{
-      padding: 16px;
+      padding: 16px 16px 10px;
       overflow:auto;
       flex: 1 1 auto;
       min-height: 0;
       scroll-behavior: smooth;
+      background:
+        radial-gradient(900px 420px at 50% -15%, rgba(255,255,255,.70), transparent 60%);
     }
 
     .row{
@@ -229,113 +260,161 @@
     .row.pen{ justify-content:flex-start; }
 
     .bubble{
-      max-width: 78%;
-      border-radius: 20px;
-      padding: 12px 12px;
-      border: 1px solid var(--border);
-      background: rgba(255,255,255,.94);
-      box-shadow: var(--shadow3);
+      max-width: 76%;
+      border-radius: var(--r-bubble);
+      padding: 12px 13px;
+      border: 1px solid rgba(0,0,0,.06);
+      background: rgba(255,255,255,.92);
+      box-shadow: 0 8px 20px rgba(0,0,0,.06);
+      animation: pop .18s ease-out both;
       position: relative;
-      animation: pop .20s ease-out both;
     }
-    @keyframes pop{
-      from { transform: translateY(4px); opacity: .0; }
-      to   { transform: translateY(0); opacity: 1; }
+    .bubble.me{
+      background: rgba(10,132,255,.12);
+      border-color: rgba(10,132,255,.14);
+      box-shadow: 0 10px 22px rgba(10,132,255,.10);
     }
 
-    .bubble.me{
-      background: rgba(10,132,255,.10);
-      border-color: rgba(10,132,255,.18);
-      box-shadow: 0 12px 28px rgba(10,132,255,.12);
+    /* Subtle "tail" (optional but iMessage-ish) */
+    .bubble.pen::after{
+      content:"";
+      position:absolute;
+      left: -6px;
+      bottom: 10px;
+      width: 12px; height: 12px;
+      background: inherit;
+      border-left: 1px solid rgba(0,0,0,.04);
+      border-bottom: 1px solid rgba(0,0,0,.04);
+      transform: rotate(45deg);
+      border-radius: 3px;
+    }
+    .bubble.me::after{
+      content:"";
+      position:absolute;
+      right: -6px;
+      bottom: 10px;
+      width: 12px; height: 12px;
+      background: inherit;
+      border-right: 1px solid rgba(10,132,255,.08);
+      border-bottom: 1px solid rgba(10,132,255,.08);
+      transform: rotate(-45deg);
+      border-radius: 3px;
+    }
+
+    @keyframes pop{
+      from { transform: translateY(6px); opacity: 0; }
+      to   { transform: translateY(0); opacity: 1; }
     }
 
     .bubbleText{
       white-space: pre-wrap;
-      color: rgba(17,17,17,.94);
-      line-height: 1.45;
-      font-size: 14px;
-      letter-spacing: .05px;
+      color: rgba(11,11,16,.94);
+      line-height: 1.46;
+      font-size: 14.7px;
+      font-weight: 520;
+      letter-spacing: .01em;
     }
-
     .meta{
       margin-top: 8px;
       font-size: 11px;
-      color: var(--muted2);
-      letter-spacing: .1px;
+      color: var(--muted-2);
+      letter-spacing: .08em;
+      text-transform: none;
     }
 
-    /* Thinking row (ultra clean) */
-    .thinking{
+    /* iMessage-like typing dots bubble */
+    .typingBubble{
       display:flex;
       align-items:center;
-      gap: 10px;
+      gap: 6px;
       padding: 10px 12px;
       border-radius: 999px;
-      border: 1px solid rgba(0,0,0,.08);
-      background: rgba(255,255,255,.78);
-      box-shadow: var(--shadow3);
-      color: var(--muted);
-      font-size: 12px;
+      border: 1px solid rgba(0,0,0,.06);
+      background: rgba(255,255,255,.86);
+      box-shadow: 0 8px 20px rgba(0,0,0,.06);
       width: fit-content;
-      max-width: 78%;
+      max-width: 76%;
+      animation: pop .18s ease-out both;
     }
-    .pulse{
-      width: 10px; height: 10px;
+    .dot3{
+      width: 6px; height: 6px;
       border-radius: 999px;
-      background: rgba(10,132,255,.75);
-      box-shadow: 0 0 0 6px rgba(10,132,255,.14);
-      animation: pulse 1.2s ease-in-out infinite;
+      background: rgba(11,11,16,.32);
+      animation: bounce 1.2s infinite;
     }
-    @keyframes pulse{
-      0%{ transform: scale(.95); opacity: .75; }
-      50%{ transform: scale(1.05); opacity: 1; }
-      100%{ transform: scale(.95); opacity: .75; }
-    }
-    .dots::after{
-      content:"";
-      display:inline-block;
-      width: 18px;
-      text-align:left;
-      animation: dots 1.2s steps(4,end) infinite;
-    }
-    @keyframes dots{
-      0%{ content:""; }
-      25%{ content:"."; }
-      50%{ content:".."; }
-      75%{ content:"..."; }
-      100%{ content:""; }
+    .dot3:nth-child(2){ animation-delay: .12s; }
+    .dot3:nth-child(3){ animation-delay: .24s; }
+    @keyframes bounce{
+      0%, 80%, 100% { transform: translateY(0); opacity:.65; }
+      40% { transform: translateY(-4px); opacity:1; }
     }
 
-    /* Composer (very iOS) */
+    /* ------------------------------------------------------------
+      Composer (iMessage-like)
+    ------------------------------------------------------------ */
     .composer{
       padding: 12px 12px 14px;
-      border-top: 1px solid var(--border);
-      background: rgba(255,255,255,.74);
+      border-top: 1px solid rgba(0,0,0,.07);
+      background: rgba(255,255,255,.68);
     }
-    .composerRow{
+
+    .composerInner{
       display:flex;
+      align-items:flex-end;
       gap: 10px;
-      align-items:center;
+      padding: 10px 10px;
+      border-radius: 22px;
+      background: rgba(255,255,255,.86);
+      border: 1px solid rgba(0,0,0,.08);
+      box-shadow: inset 0 1px 0 rgba(255,255,255,.95), 0 12px 30px rgba(0,0,0,.06);
     }
+
+    textarea{
+      font: inherit;
+    }
+
     .input{
-      flex:1;
-      border-radius: 999px;
-      padding: 12px 14px;
-      border: 1px solid rgba(0,0,0,.10);
-      background: rgba(255,255,255,.96);
+      flex: 1 1 auto;
+      border: none;
+      outline: none;
+      background: transparent;
       color: var(--text);
-      outline:none;
-      font-size: 14px;
-      letter-spacing: .05px;
-      box-shadow: inset 0 1px 0 rgba(255,255,255,.9), 0 10px 24px rgba(0,0,0,.06);
-      transition: box-shadow .15s ease, border-color .15s ease;
+      font-size: 14.7px;
+      line-height: 1.35;
+      padding: 2px 6px;
+      min-height: 24px;
+      resize: none;
+      letter-spacing: .01em;
     }
-    .input:focus{
-      border-color: rgba(10,132,255,.32);
-      box-shadow:
-        0 0 0 6px rgba(10,132,255,.10),
-        inset 0 1px 0 rgba(255,255,255,.9),
-        0 12px 30px rgba(0,0,0,.08);
+    .input::placeholder{ color: rgba(11,11,16,.35); }
+
+    .sendBtn{
+      width: 38px;
+      height: 38px;
+      border-radius: 999px;
+      border: 1px solid rgba(0,0,0,.10);
+      background: rgba(255,255,255,.70);
+      color: rgba(11,11,16,.72);
+      display:grid;
+      place-items:center;
+      cursor:pointer;
+      box-shadow: 0 10px 24px rgba(0,0,0,.08);
+      transition: transform .08s ease, filter .15s ease, background .15s ease, box-shadow .15s ease, border-color .15s ease;
+      user-select:none;
+    }
+    .sendBtn:hover{ filter: brightness(1.02); }
+    .sendBtn:active{ transform: translateY(1px); }
+
+    .sendBtn.enabled{
+      background: linear-gradient(180deg, rgba(10,132,255,.98), rgba(0,119,237,.98));
+      border-color: rgba(0,119,237,.40);
+      color: white;
+      box-shadow: 0 14px 34px rgba(10,132,255,.22);
+    }
+    .sendIcon{
+      width: 18px;
+      height: 18px;
+      display:block;
     }
 
     .hint{
@@ -353,10 +432,10 @@
       border-bottom-width: 2px;
       padding: 2px 8px;
       border-radius: 10px;
-      background: rgba(255,255,255,.92);
+      background: rgba(255,255,255,.90);
       font-weight: 900;
-      color: rgba(17,17,17,.70);
-      letter-spacing: .1px;
+      color: rgba(11,11,16,.68);
+      letter-spacing: .04em;
     }
 
     .footer{
@@ -364,22 +443,24 @@
       text-align:center;
       font-size: 12px;
       color: var(--muted);
-      border-top: 1px solid var(--border);
-      background: rgba(255,255,255,.74);
+      border-top: 1px solid rgba(0,0,0,.07);
+      background: rgba(255,255,255,.68);
     }
     .footer strong{ color: var(--text); }
 
-    /* Drawer (Audit + Settings) */
-    .drawerOverlay{
+    /* ------------------------------------------------------------
+      Drawer (Details)
+    ------------------------------------------------------------ */
+    .overlay{
       position: fixed;
       inset: 0;
-      background: rgba(0,0,0,.20);
-      backdrop-filter: blur(6px);
+      background: rgba(0,0,0,.22);
+      backdrop-filter: blur(7px);
       opacity: 0;
       pointer-events: none;
       transition: opacity .18s ease;
     }
-    .drawerOverlay.open{
+    .overlay.open{
       opacity: 1;
       pointer-events: auto;
     }
@@ -411,10 +492,10 @@
       background: rgba(255,255,255,.82);
     }
     .drawerHeader .dTitle{
+      margin:0;
       font-weight: 900;
       font-size: 13px;
-      letter-spacing: .2px;
-      margin:0;
+      letter-spacing: .02em;
     }
 
     .drawerBody{
@@ -435,8 +516,9 @@
     .sectionTitle{
       font-size: 12px;
       font-weight: 900;
-      color: rgba(17,17,17,.80);
-      letter-spacing: .2px;
+      color: rgba(11,11,16,.80);
+      letter-spacing: .08em;
+      text-transform: uppercase;
       margin: 2px 0 10px;
     }
     .sectionNote{
@@ -446,42 +528,30 @@
       line-height: 1.35;
     }
 
-    pre{
-      margin:0;
-      padding: 12px;
-      border-radius: 16px;
-      background: rgba(245,245,247,.85);
-      border: 1px solid rgba(0,0,0,.08);
-      overflow:auto;
-      max-height: 45vh;
-      color: rgba(17,17,17,.86);
-      font-size: 12px;
-      line-height: 1.35;
-    }
-
-    /* iOS-like switches */
+    /* Switch rows */
     .switchRow{
       display:flex;
       align-items:center;
       justify-content:space-between;
-      gap: 10px;
+      gap: 12px;
       padding: 10px 2px;
-    }
-    .switchLabel{
-      font-size: 13px;
-      font-weight: 800;
-      color: rgba(17,17,17,.86);
-      letter-spacing: .1px;
-    }
-    .switchSub{
-      font-size: 12px;
-      color: var(--muted);
-      margin-top: 2px;
     }
     .switchText{
       display:flex;
       flex-direction:column;
       min-width: 0;
+    }
+    .switchLabel{
+      font-size: 13px;
+      font-weight: 900;
+      color: rgba(11,11,16,.86);
+      letter-spacing: .01em;
+    }
+    .switchSub{
+      font-size: 12px;
+      color: var(--muted);
+      margin-top: 2px;
+      line-height: 1.25;
     }
 
     .switch{
@@ -490,18 +560,14 @@
       height: 28px;
       flex: 0 0 auto;
     }
-    .switch input{
-      opacity: 0;
-      width: 0;
-      height: 0;
-    }
+    .switch input{ opacity: 0; width: 0; height: 0; }
     .slider{
       position:absolute;
       inset: 0;
       border-radius: 999px;
       background: rgba(0,0,0,.16);
       border: 1px solid rgba(0,0,0,.10);
-      transition: background .15s ease;
+      transition: background .15s ease, border-color .15s ease;
     }
     .slider:before{
       content:"";
@@ -516,13 +582,39 @@
       transition: transform .15s ease;
     }
     .switch input:checked + .slider{
-      background: rgba(10,132,255,.85);
+      background: rgba(10,132,255,.88);
       border-color: rgba(10,132,255,.30);
     }
     .switch input:checked + .slider:before{
       transform: translateX(18px);
     }
 
+    pre{
+      margin:0;
+      padding: 12px;
+      border-radius: 16px;
+      background: rgba(245,245,247,.88);
+      border: 1px solid rgba(0,0,0,.08);
+      overflow:auto;
+      max-height: 46vh;
+      color: rgba(11,11,16,.86);
+      font-size: 12px;
+      line-height: 1.35;
+    }
+
+    .rowButtons{
+      display:flex;
+      gap: 10px;
+      margin-top: 10px;
+      flex-wrap:wrap;
+    }
+    .danger{
+      border-color: rgba(255,59,48,.24);
+      background: rgba(255,59,48,.08);
+      color: rgba(255,59,48,.92);
+    }
+
+    /* Mobile */
     @media (max-width: 720px){
       body{ overflow:auto; }
       .shell{ height:auto; }
@@ -532,21 +624,27 @@
 </head>
 
 <body>
-  <!-- Top Bar -->
+  <!-- Topbar -->
   <div class="topbar">
-    <div class="titleBlock">
+    <div class="brand">
       <p class="title">Pen²</p>
-      <div class="sub">Premium minimal demo UI • Soficca Core</div>
+      <div class="sub">Premium messages demo • Soficca Core</div>
     </div>
 
     <div class="topActions">
       <div class="status" title="Client status">
-        <span class="dot" id="statusDot"></span>
+        <span class="statusDot" id="statusDot"></span>
         <span id="statusText">ready</span>
       </div>
 
-      <button class="btn btnGhost" id="openDrawer" title="Audit & Settings">Details</button>
-      <button class="btn btnGhost" id="resetTop" title="Reset session">Reset</button>
+      <button class="iconBtn" id="openDrawer" title="Details">
+        <!-- three dots icon -->
+        <svg class="dotsIcon" viewBox="0 0 24 24" fill="none" aria-hidden="true">
+          <circle cx="6" cy="12" r="1.8" fill="currentColor"/>
+          <circle cx="12" cy="12" r="1.8" fill="currentColor"/>
+          <circle cx="18" cy="12" r="1.8" fill="currentColor"/>
+        </svg>
+      </button>
     </div>
   </div>
 
@@ -554,22 +652,30 @@
   <div class="shell">
     <div class="card">
       <div class="cardHeader">
-        <div class="left">
+        <div class="headerLeft">
           <p class="hTitle">Conversation</p>
           <div class="pathPill" id="pathPill">path</div>
         </div>
-        <button class="btn btnPrimary" id="sendTop" title="Send message">Send</button>
+        <!-- intentionally minimal: no reset here -->
       </div>
 
       <div class="chat" id="chat"></div>
 
       <div class="composer">
-        <div class="composerRow">
-          <input id="text" class="input" type="text" placeholder="Type a message…" autocomplete="off" />
+        <div class="composerInner">
+          <textarea id="text" class="input" rows="1" placeholder="Message…"></textarea>
+          <button id="send" class="sendBtn" title="Send" aria-disabled="true">
+            <svg class="sendIcon" viewBox="0 0 24 24" fill="none" aria-hidden="true">
+              <path d="M12 5l-6.5 6.5" stroke="currentColor" stroke-width="2.2" stroke-linecap="round"/>
+              <path d="M12 5l6.5 6.5" stroke="currentColor" stroke-width="2.2" stroke-linecap="round"/>
+              <path d="M12 5v14" stroke="currentColor" stroke-width="2.2" stroke-linecap="round"/>
+            </svg>
+          </button>
         </div>
+
         <div class="hint">
-          <div>Short inputs work best. The engine will guide the next step.</div>
-          <div><span class="kbd">Enter</span> to send</div>
+          <div><span class="kbd">Enter</span> send • <span class="kbd">Shift</span>+<span class="kbd">Enter</span> new line</div>
+          <div>Short inputs work best.</div>
         </div>
       </div>
 
@@ -578,11 +684,16 @@
   </div>
 
   <!-- Drawer -->
-  <div class="drawerOverlay" id="drawerOverlay"></div>
+  <div class="overlay" id="overlay"></div>
   <aside class="drawer" id="drawer">
     <div class="drawerHeader">
       <p class="dTitle">Details</p>
-      <button class="btn btnGhost" id="closeDrawer">Close</button>
+      <button class="iconBtn" id="closeDrawer" title="Close">
+        <svg class="dotsIcon" viewBox="0 0 24 24" fill="none" aria-hidden="true">
+          <path d="M7 7l10 10" stroke="currentColor" stroke-width="2.2" stroke-linecap="round"/>
+          <path d="M17 7L7 17" stroke="currentColor" stroke-width="2.2" stroke-linecap="round"/>
+        </svg>
+      </button>
     </div>
 
     <div class="drawerBody">
@@ -592,7 +703,7 @@
         <div class="switchRow">
           <div class="switchText">
             <div class="switchLabel">Debug</div>
-            <div class="switchSub">Include debug=true (may return extra state)</div>
+            <div class="switchSub">Include debug=true (extra state)</div>
           </div>
           <label class="switch">
             <input type="checkbox" id="debug" />
@@ -603,7 +714,7 @@
         <div class="switchRow">
           <div class="switchText">
             <div class="switchLabel">Slow mode</div>
-            <div class="switchSub">Adds a deliberate pause before responses</div>
+            <div class="switchSub">Adds a deliberate pause</div>
           </div>
           <label class="switch">
             <input type="checkbox" id="slowMode" checked />
@@ -614,7 +725,7 @@
         <div class="switchRow">
           <div class="switchText">
             <div class="switchLabel">Typing effect</div>
-            <div class="switchSub">Assistant messages appear as if typed</div>
+            <div class="switchSub">Assistant message types in</div>
           </div>
           <label class="switch">
             <input type="checkbox" id="typing" checked />
@@ -625,27 +736,31 @@
         <div class="switchRow">
           <div class="switchText">
             <div class="switchLabel">Sound</div>
-            <div class="switchSub">Subtle send/receive chimes</div>
+            <div class="switchSub">Subtle chimes</div>
           </div>
           <label class="switch">
             <input type="checkbox" id="sound" />
             <span class="slider"></span>
           </label>
         </div>
+
+        <div class="rowButtons">
+          <button class="btnPill danger" id="resetSession" title="Reset session">Reset session</button>
+        </div>
       </div>
 
       <div class="section">
         <div class="sectionTitle">Audit</div>
         <pre id="audit">{}</pre>
-        <p class="sectionNote">
-          Shows: engine_version, ruleset_version, path, flags, reasons, recommendations, trace.
-        </p>
+        <p class="sectionNote">Shows: engine_version, ruleset_version, path, flags, reasons, recommendations, trace.</p>
       </div>
     </div>
   </aside>
 
   <script>
-    // --- State ---
+    // =========================
+    // State
+    // =========================
     let chatState = null;
     let sessionId = null;
 
@@ -653,17 +768,20 @@
     const userProfile = { name: "Carlos", dob: "1993-01-01" };
 
     // DOM
-    let chatEl, auditEl, statusTextEl, statusDotEl, pathPill;
-    let textInput, sendTopBtn, resetTopBtn, openDrawerBtn, closeDrawerBtn, drawer, overlay;
+    let chatEl, auditEl, pathPill, statusDot, statusText;
+    let overlay, drawer;
+    let textArea, sendBtn;
 
-    // --- Helpers ---
+    // =========================
+    // Helpers
+    // =========================
     function sleep(ms){ return new Promise(r => setTimeout(r, ms)); }
 
-    function setStatus(mode, text){
-      statusTextEl.textContent = text || mode;
-      statusDotEl.classList.remove("thinking","error");
-      if (mode === "thinking") statusDotEl.classList.add("thinking");
-      if (mode === "error") statusDotEl.classList.add("error");
+    function setStatus(mode, label){
+      statusText.textContent = label || mode;
+      statusDot.classList.remove("thinking","error");
+      if (mode === "thinking") statusDot.classList.add("thinking");
+      if (mode === "error") statusDot.classList.add("error");
     }
 
     function playBeep(type){
@@ -678,10 +796,10 @@
 
         o.type = "sine";
         const now = ctx.currentTime;
-
         const freq = type === "send" ? 520 : 690;
+
         o.frequency.setValueAtTime(freq, now);
-        g.gain.setValueAtTime(0.018, now); // subtle
+        g.gain.setValueAtTime(0.015, now); // very subtle
         g.gain.exponentialRampToValueAtTime(0.0001, now + 0.12);
 
         o.start(now);
@@ -690,7 +808,6 @@
     }
 
     function scrollToBottom(){
-      if (!chatEl) return;
       chatEl.scrollTop = chatEl.scrollHeight;
     }
 
@@ -701,7 +818,7 @@
       return row;
     }
 
-    function addBubble(who, text, meta = ""){
+    function addBubble(who, text, meta=""){
       const row = addRow(who);
 
       const bubble = document.createElement("div");
@@ -713,23 +830,24 @@
 
       bubble.appendChild(bubbleText);
 
-      const metaEl = document.createElement("div");
-      metaEl.className = "meta";
-      metaEl.textContent = meta || "";
-      if (meta) bubble.appendChild(metaEl);
+      if (meta){
+        const m = document.createElement("div");
+        m.className = "meta";
+        m.textContent = meta;
+        bubble.appendChild(m);
+      }
 
       row.appendChild(bubble);
       scrollToBottom();
-
-      return { row, bubble, bubbleText, metaEl };
+      return { row, bubble, bubbleText };
     }
 
-    function addThinking(){
+    function addTypingIndicator(){
       const row = addRow("pen");
-      const box = document.createElement("div");
-      box.className = "thinking";
-      box.innerHTML = '<span class="pulse"></span><span>Thinking<span class="dots"></span></span>';
-      row.appendChild(box);
+      const b = document.createElement("div");
+      b.className = "typingBubble";
+      b.innerHTML = '<span class="dot3"></span><span class="dot3"></span><span class="dot3"></span>';
+      row.appendChild(b);
       scrollToBottom();
       return row;
     }
@@ -770,6 +888,29 @@
       return sessionId;
     }
 
+    function isSendEnabled(){
+      return ((textArea.value || "").trim().length > 0);
+    }
+
+    function updateSendUI(){
+      const enabled = isSendEnabled();
+      sendBtn.classList.toggle("enabled", enabled);
+      sendBtn.setAttribute("aria-disabled", enabled ? "false" : "true");
+    }
+
+    function autoGrowTextarea(){
+      textArea.style.height = "auto";
+      const max = 5 * 22;
+      textArea.style.height = Math.min(textArea.scrollHeight, max) + "px";
+    }
+
+    function typingDelayForChar(ch){
+      if (ch === "\n") return 140;
+      if (".,;:".includes(ch)) return 70;
+      if ("?!".includes(ch)) return 95;
+      return 0;
+    }
+
     async function typeInto(el, fullText){
       const enabled = !!document.getElementById("typing")?.checked;
       if (!enabled){
@@ -780,36 +921,37 @@
 
       el.textContent = "";
       const text = fullText || "";
-
-      // chunk typing: smooth + fast enough to feel premium
-      const chunkSize = 2;
       let i = 0;
 
       while (i < text.length){
-        el.textContent += text.slice(i, i + chunkSize);
+        const progress = i / Math.max(1, text.length);
+        const chunkSize = progress < 0.15 ? 1 : (progress < 0.60 ? 2 : 3);
+
+        const chunk = text.slice(i, i + chunkSize);
+        el.textContent += chunk;
         i += chunkSize;
 
         const nearBottom = (chatEl.scrollHeight - (chatEl.scrollTop + chatEl.clientHeight)) < 140;
         if (nearBottom) scrollToBottom();
 
-        const delay = 10 + Math.floor(Math.random() * 14); // 10..23ms
+        let delay = 9 + Math.floor(Math.random() * 10); // 9..18
+        delay += typingDelayForChar(chunk[chunk.length - 1]);
         await sleep(delay);
       }
     }
 
-    async function sendToEngine(text){
+    async function sendToEngine(messageText){
       setStatus("thinking", "thinking");
       playBeep("send");
 
       const debug = !!document.getElementById("debug")?.checked;
       const slowMode = !!document.getElementById("slowMode")?.checked;
 
-      const thinkingRow = addThinking();
+      const typingRow = addTypingIndicator();
 
-      // Deliberate pause to avoid “form submit” vibe
       if (slowMode){
         await sleep(220);
-        await sleep(180 + Math.floor(Math.random() * 220));
+        await sleep(160 + Math.floor(Math.random() * 220));
       }
 
       await ensureSession();
@@ -819,7 +961,7 @@
         measurements: [],
         context: {
           session_id: sessionId,
-          chat_text: text,
+          chat_text: messageText,
           chat_state: chatState,
           debug: debug,
         },
@@ -833,7 +975,7 @@
 
       const raw = await res.text();
       if (!res.ok){
-        if (thinkingRow) thinkingRow.remove();
+        if (typingRow) typingRow.remove();
         addBubble("pen", `Server error ${res.status}: ${raw}`);
         setStatus("error", "error");
         return;
@@ -847,27 +989,25 @@
       setAudit(report);
 
       if (slowMode){
-        await sleep(180 + Math.floor(Math.random() * 220));
+        await sleep(160 + Math.floor(Math.random() * 220));
       }
 
-      if (thinkingRow) thinkingRow.remove();
+      if (typingRow) typingRow.remove();
 
       const meta = `phase=${chat.phase} done=${chat.done} • session=${sessionId}`;
       const b = addBubble("pen", "", meta);
 
-      // Type assistant message (premium feel)
       await typeInto(b.bubbleText, (chat.assistant_message || "(no message)"));
 
-      // meta already present; keep it below
       playBeep("recv");
       setStatus("ready", "ready");
     }
 
-    function openDetails(){
+    function openDrawer(){
       overlay.classList.add("open");
       drawer.classList.add("open");
     }
-    function closeDetails(){
+    function closeDrawer(){
       overlay.classList.remove("open");
       drawer.classList.remove("open");
     }
@@ -890,51 +1030,67 @@
       await sendToEngine("");
     }
 
+    // =========================
+    // Boot
+    // =========================
     window.addEventListener("DOMContentLoaded", () => {
       chatEl = document.getElementById("chat");
       auditEl = document.getElementById("audit");
-      statusTextEl = document.getElementById("statusText");
-      statusDotEl = document.getElementById("statusDot");
       pathPill = document.getElementById("pathPill");
+      statusDot = document.getElementById("statusDot");
+      statusText = document.getElementById("statusText");
 
-      textInput = document.getElementById("text");
-      sendTopBtn = document.getElementById("sendTop");
-      resetTopBtn = document.getElementById("resetTop");
-
-      openDrawerBtn = document.getElementById("openDrawer");
-      closeDrawerBtn = document.getElementById("closeDrawer");
+      overlay = document.getElementById("overlay");
       drawer = document.getElementById("drawer");
-      overlay = document.getElementById("drawerOverlay");
 
-      if (!chatEl || !auditEl || !statusTextEl || !statusDotEl || !pathPill || !textInput || !sendTopBtn){
+      textArea = document.getElementById("text");
+      sendBtn = document.getElementById("send");
+
+      const openBtn = document.getElementById("openDrawer");
+      const closeBtn = document.getElementById("closeDrawer");
+      const resetBtn = document.getElementById("resetSession");
+
+      if (!chatEl || !auditEl || !pathPill || !statusDot || !statusText || !overlay || !drawer || !textArea || !sendBtn){
         console.error("Missing required DOM elements");
         return;
       }
 
-      // Send
-      async function handleSend(){
-        const text = textInput.value.trim();
+      openBtn?.addEventListener("click", openDrawer);
+      closeBtn?.addEventListener("click", closeDrawer);
+      overlay?.addEventListener("click", closeDrawer);
+      window.addEventListener("keydown", (e) => { if (e.key === "Escape") closeDrawer(); });
+
+      resetBtn?.addEventListener("click", doReset);
+
+      // Composer behavior
+      function handleSend(){
+        const text = (textArea.value || "").trim();
         if (!text) return;
         addBubble("me", text);
-        textInput.value = "";
-        await sendToEngine(text);
+        textArea.value = "";
+        autoGrowTextarea();
+        updateSendUI();
+        sendToEngine(text);
       }
 
-      sendTopBtn.addEventListener("click", handleSend);
-      textInput.addEventListener("keydown", (e) => {
-        if (e.key === "Enter") handleSend();
+      sendBtn.addEventListener("click", handleSend);
+
+      textArea.addEventListener("input", () => {
+        autoGrowTextarea();
+        updateSendUI();
       });
 
-      // Reset
-      resetTopBtn?.addEventListener("click", doReset);
-
-      // Drawer
-      openDrawerBtn?.addEventListener("click", openDetails);
-      closeDrawerBtn?.addEventListener("click", closeDetails);
-      overlay?.addEventListener("click", closeDetails);
-      window.addEventListener("keydown", (e) => {
-        if (e.key === "Escape") closeDetails();
+      textArea.addEventListener("keydown", (e) => {
+        // Enter sends, Shift+Enter newline
+        if (e.key === "Enter" && !e.shiftKey){
+          e.preventDefault();
+          handleSend();
+        }
       });
+
+      // initial state
+      autoGrowTextarea();
+      updateSendUI();
 
       // Boot
       (async function boot(){
